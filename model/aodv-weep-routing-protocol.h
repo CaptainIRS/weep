@@ -27,7 +27,7 @@ namespace weep {
  *
  * \brief AODV routing protocol
  */
-class AodvRoutingProtocol : public Ipv4RoutingProtocol
+class AodvWeepRoutingProtocol : public Ipv4RoutingProtocol
 {
 public:
   /**
@@ -38,8 +38,8 @@ public:
   static const uint32_t AODV_WEEP_PORT;
 
   /// constructor
-  AodvRoutingProtocol ();
-  virtual ~AodvRoutingProtocol ();
+  AodvWeepRoutingProtocol ();
+  virtual ~AodvWeepRoutingProtocol ();
   virtual void DoDispose ();
 
   // Inherited from Ipv4RoutingProtocol

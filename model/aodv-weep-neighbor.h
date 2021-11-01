@@ -16,7 +16,7 @@ class WifiMacHeader;
 
 namespace weep {
 
-class AodvRoutingProtocol;
+class AodvWeepRoutingProtocol;
 
 /**
  * \ingroup weep

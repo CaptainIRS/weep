@@ -7,7 +7,7 @@
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
-    module = bld.create_ns3_module('weep', ['core', 'internet', 'wifi'])
+    module = bld.create_ns3_module('weep', ['core', 'flow-monitor', 'internet', 'wifi'])
     module.includes = '.'
     module.source = [
         'model/aodv-weep-id-cache.cc',
@@ -17,6 +17,7 @@ def build(bld):
         'model/aodv-weep-packet.cc',
         'model/aodv-weep-neighbor.cc',
         'model/aodv-weep-routing-protocol.cc',
+        'helper/aodv-weep-helper.cc',
         'helper/weep-helper.cc',
         ]
 
@@ -40,6 +41,7 @@ def build(bld):
         'model/aodv-weep-packet.h',
         'model/aodv-weep-neighbor.h',
         'model/aodv-weep-routing-protocol.h',
+        'helper/aodv-weep-helper.h',
         'helper/weep-helper.h',
         ]
 
