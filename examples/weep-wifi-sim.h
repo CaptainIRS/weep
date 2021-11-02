@@ -53,6 +53,7 @@ private:
   void InstallInternetStack ();
   void InstallApplications ();
   void SetupMobility ();
+  void InstallEnergyModels ();
   Ptr <Socket> SetupPacketReceive (Ipv4Address addr, Ptr <Node> node );
 
 };

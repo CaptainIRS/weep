@@ -6,6 +6,7 @@
 #include <math.h>
 #include <sstream>
 #include "ns3/core-module.h"
+#include "ns3/energy-module.h"
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/flow-monitor.h"
 #include "ns3/ipv4-flow-classifier.h"
@@ -16,6 +17,7 @@
 #include "ns3/config-store-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/packet.h"
+#include "ns3/wifi-radio-energy-model-helper.h"
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/aodv-weep-helper.h"
 
@@ -91,6 +93,7 @@ WeepWifiSimulation::CaseRun (uint32_t nWifis, uint32_t nSinks, double totalTime,
   SetupMobility ();
   InstallInternetStack ();
   InstallApplications ();
+  InstallEnergyModels ();
 
   FlowMonitorHelper flowHelper;
   auto monitor = flowHelper.InstallAll ();
@@ -206,5 +209,22 @@ WeepWifiSimulation::InstallApplications ()
             }
         }
     }
+}
+
+void
+WeepWifiSimulation::InstallEnergyModels ()
+{
+  BasicEnergySourceHelper basicSourceHelper;
+  // configure energy source
+  basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (10));
+  // install source
+  EnergySourceContainer sources = basicSourceHelper.Install (nodes);
+  /* device energy model */
+  WifiRadioEnergyModelHelper radioEnergyHelper;
+  // configure radio energy model
+  // radioEnergyHelper.Set ("TxCurrentA", DoubleValue (0.0174));
+  // install device model
+  DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (devices, sources);
+
 }
 
