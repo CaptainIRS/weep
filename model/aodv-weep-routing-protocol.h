@@ -4,7 +4,7 @@
 #define AODV_WEEP_ROUTINGPROTOCOL_H
 
 #include "aodv-weep-rtable.h"
-#include "aodv-weep-rqueue.h"
+#include "aodv-weep-sendbuffer.h"
 #include "aodv-weep-packet.h"
 #include "aodv-weep-neighbor.h"
 #include "aodv-weep-dpd.h"
@@ -218,7 +218,7 @@ private:
   /// Routing table
   RoutingTable m_routingTable;
   /// A "drop-front" queue used by the routing layer to buffer packets to which it does not have a route.
-  RequestQueue m_queue;
+  AodvSendBuffer m_queue;
   /// Broadcast ID
   uint32_t m_requestId;
   /// Request sequence number

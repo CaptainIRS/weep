@@ -406,7 +406,7 @@ AodvWeepRoutingProtocol::DeferredRouteOutput (Ptr<const Packet> p, const Ipv4Hea
   NS_LOG_FUNCTION (this << p << header);
   NS_ASSERT (p != 0 && p != Ptr<Packet> ());
 
-  QueueEntry newEntry (p, header, ucb, ecb);
+  AodvSendBufferEntry newEntry (p, header, ucb, ecb);
   bool result = m_queue.Enqueue (newEntry);
   if (result)
     {
@@ -1855,11 +1855,11 @@ void
 AodvWeepRoutingProtocol::SendPacketFromQueue (Ipv4Address dst, Ptr<Ipv4Route> route)
 {
   NS_LOG_FUNCTION (this);
-  QueueEntry queueEntry;
-  while (m_queue.Dequeue (dst, queueEntry))
+  AodvSendBufferEntry aodvSendBufferEntry;
+  while (m_queue.Dequeue (dst, aodvSendBufferEntry))
     {
       DeferredRouteOutputTag tag;
-      Ptr<Packet> p = ConstCast<Packet> (queueEntry.GetPacket ());
+      Ptr<Packet> p = ConstCast<Packet> (aodvSendBufferEntry.GetPacket ());
       if (p->RemovePacketTag (tag)
           && tag.GetInterface () != -1
           && tag.GetInterface () != m_ipv4->GetInterfaceForDevice (route->GetOutputDevice ()))
@@ -1867,8 +1867,8 @@ AodvWeepRoutingProtocol::SendPacketFromQueue (Ipv4Address dst, Ptr<Ipv4Route> ro
           NS_LOG_DEBUG ("Output device doesn't match. Dropped.");
           return;
         }
-      UnicastForwardCallback ucb = queueEntry.GetUnicastForwardCallback ();
-      Ipv4Header header = queueEntry.GetIpv4Header ();
+      UnicastForwardCallback ucb = aodvSendBufferEntry.GetUnicastForwardCallback ();
+      Ipv4Header header = aodvSendBufferEntry.GetIpv4Header ();
       header.SetSource (route->GetSource ());
       header.SetTtl (header.GetTtl () + 1); // compensate extra TTL decrement by fake loopback routing
       ucb (route, p, header);

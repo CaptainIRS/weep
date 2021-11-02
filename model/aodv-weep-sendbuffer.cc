@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
-#include "aodv-weep-rqueue.h"
+#include "aodv-weep-sendbuffer.h"
 #include <algorithm>
 #include <functional>
 #include "ns3/ipv4-route.h"
@@ -13,17 +13,17 @@ NS_LOG_COMPONENT_DEFINE ("AodvRequestQueue");
 
 namespace weep {
 uint32_t
-RequestQueue::GetSize ()
+AodvSendBuffer::GetSize ()
 {
   Purge ();
   return m_queue.size ();
 }
 
 bool
-RequestQueue::Enqueue (QueueEntry & entry)
+AodvSendBuffer::Enqueue (AodvSendBufferEntry & entry)
 {
   Purge ();
-  for (std::vector<QueueEntry>::const_iterator i = m_queue.begin (); i
+  for (std::vector<AodvSendBufferEntry>::const_iterator i = m_queue.begin (); i
        != m_queue.end (); ++i)
     {
       if ((i->GetPacket ()->GetUid () == entry.GetPacket ()->GetUid ())
@@ -33,7 +33,7 @@ RequestQueue::Enqueue (QueueEntry & entry)
           return false;
         }
     }
-  entry.SetExpireTime (m_queueTimeout);
+  entry.SetExpireTime (m_sendBufferTimeout);
   if (m_queue.size () == m_maxLen)
     {
       Drop (m_queue.front (), "Drop the most aged packet"); // Drop the most aged packet
@@ -44,11 +44,11 @@ RequestQueue::Enqueue (QueueEntry & entry)
 }
 
 void
-RequestQueue::DropPacketWithDst (Ipv4Address dst)
+AodvSendBuffer::DropPacketWithDst (Ipv4Address dst)
 {
   NS_LOG_FUNCTION (this << dst);
   Purge ();
-  for (std::vector<QueueEntry>::iterator i = m_queue.begin (); i
+  for (std::vector<AodvSendBufferEntry>::iterator i = m_queue.begin (); i
        != m_queue.end (); ++i)
     {
       if (i->GetIpv4Header ().GetDestination () == dst)
@@ -57,15 +57,15 @@ RequestQueue::DropPacketWithDst (Ipv4Address dst)
         }
     }
   auto new_end = std::remove_if (m_queue.begin (), m_queue.end (),
-                                 [&](const QueueEntry& en) { return en.GetIpv4Header ().GetDestination () == dst; });
+                                 [&](const AodvSendBufferEntry& en) { return en.GetIpv4Header ().GetDestination () == dst; });
   m_queue.erase (new_end, m_queue.end ());
 }
 
 bool
-RequestQueue::Dequeue (Ipv4Address dst, QueueEntry & entry)
+AodvSendBuffer::Dequeue (Ipv4Address dst, AodvSendBufferEntry & entry)
 {
   Purge ();
-  for (std::vector<QueueEntry>::iterator i = m_queue.begin (); i != m_queue.end (); ++i)
+  for (std::vector<AodvSendBufferEntry>::iterator i = m_queue.begin (); i != m_queue.end (); ++i)
     {
       if (i->GetIpv4Header ().GetDestination () == dst)
         {
@@ -78,9 +78,9 @@ RequestQueue::Dequeue (Ipv4Address dst, QueueEntry & entry)
 }
 
 bool
-RequestQueue::Find (Ipv4Address dst)
+AodvSendBuffer::Find (Ipv4Address dst)
 {
-  for (std::vector<QueueEntry>::const_iterator i = m_queue.begin (); i
+  for (std::vector<AodvSendBufferEntry>::const_iterator i = m_queue.begin (); i
        != m_queue.end (); ++i)
     {
       if (i->GetIpv4Header ().GetDestination () == dst)
@@ -100,20 +100,20 @@ struct IsExpired
   /**
    * Check if the entry is expired
    *
-   * \param e QueueEntry entry
+   * \param e AodvSendBufferEntry entry
    * \return true if expired, false otherwise
    */
-  operator() (QueueEntry const & e) const
+  operator() (AodvSendBufferEntry const & e) const
   {
     return (e.GetExpireTime () < Seconds (0));
   }
 };
 
 void
-RequestQueue::Purge ()
+AodvSendBuffer::Purge ()
 {
   IsExpired pred;
-  for (std::vector<QueueEntry>::iterator i = m_queue.begin (); i
+  for (std::vector<AodvSendBufferEntry>::iterator i = m_queue.begin (); i
        != m_queue.end (); ++i)
     {
       if (pred (*i))
@@ -126,7 +126,7 @@ RequestQueue::Purge ()
 }
 
 void
-RequestQueue::Drop (QueueEntry en, std::string reason)
+AodvSendBuffer::Drop (AodvSendBufferEntry en, std::string reason)
 {
   NS_LOG_LOGIC (reason << en.GetPacket ()->GetUid () << " " << en.GetIpv4Header ().GetDestination ());
   en.GetErrorCallback () (en.GetPacket (), en.GetIpv4Header (),

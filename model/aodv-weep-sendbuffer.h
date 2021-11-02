@@ -13,9 +13,9 @@ namespace weep {
 
 /**
  * \ingroup weep
- * \brief AODV Queue Entry
+ * \brief AODV Send buffer entry
  */
-class QueueEntry
+class AodvSendBufferEntry
 {
 public:
   /// IPv4 routing unicast forward callback typedef
@@ -31,7 +31,7 @@ public:
    * \param ecb the ErrorCallback function
    * \param exp the expiration time
    */
-  QueueEntry (Ptr<const Packet> pa = 0, Ipv4Header const & h = Ipv4Header (),
+  AodvSendBufferEntry (Ptr<const Packet> pa = 0, Ipv4Header const & h = Ipv4Header (),
               UnicastForwardCallback ucb = UnicastForwardCallback (),
               ErrorCallback ecb = ErrorCallback (), Time exp = Simulator::Now ())
     : m_packet (pa),
@@ -44,10 +44,10 @@ public:
 
   /**
    * \brief Compare queue entries
-   * \param o QueueEntry to compare
+   * \param o AodvSendBufferEntry to compare
    * \return true if equal
    */
-  bool operator== (QueueEntry const & o) const
+  bool operator== (AodvSendBufferEntry const & o) const
   {
     return ((m_packet == o.m_packet) && (m_header.GetDestination () == o.m_header.GetDestination ()) && (m_expire == o.m_expire));
   }
@@ -148,11 +148,11 @@ private:
 };
 /**
  * \ingroup weep
- * \brief AODV route request queue
+ * \brief AODV send buffer
  *
  * Since AODV is an on demand routing we queue requests while looking for route.
  */
-class RequestQueue
+class AodvSendBuffer
 {
 public:
   /**
@@ -161,9 +161,9 @@ public:
    * \param maxLen the maximum length
    * \param routeToQueueTimeout the route to queue timeout
    */
-  RequestQueue (uint32_t maxLen, Time routeToQueueTimeout)
+  AodvSendBuffer (uint32_t maxLen, Time routeToQueueTimeout)
     : m_maxLen (maxLen),
-      m_queueTimeout (routeToQueueTimeout)
+      m_sendBufferTimeout (routeToQueueTimeout)
   {
   }
   /**
@@ -171,7 +171,7 @@ public:
    * \param entry the queue entry
    * \returns true if the entry is queued
    */
-  bool Enqueue (QueueEntry & entry);
+  bool Enqueue (AodvSendBufferEntry & entry);
   /**
    * Return first found (the earliest) entry for given destination
    * 
@@ -179,7 +179,7 @@ public:
    * \param entry the queue entry
    * \returns true if the entry is dequeued
    */
-  bool Dequeue (Ipv4Address dst, QueueEntry & entry);
+  bool Dequeue (Ipv4Address dst, AodvSendBufferEntry & entry);
   /**
    * Remove all packets with destination IP address dst
    * \param dst the destination IP address
@@ -220,7 +220,7 @@ public:
    */
   Time GetQueueTimeout () const
   {
-    return m_queueTimeout;
+    return m_sendBufferTimeout;
   }
   /**
    * Set queue timeout
@@ -228,12 +228,12 @@ public:
    */
   void SetQueueTimeout (Time t)
   {
-    m_queueTimeout = t;
+    m_sendBufferTimeout = t;
   }
 
 private:
   /// The queue
-  std::vector<QueueEntry> m_queue;
+  std::vector<AodvSendBufferEntry> m_queue;
   /// Remove all expired entries
   void Purge ();
   /**
@@ -241,11 +241,11 @@ private:
    * \param en the queue entry to drop
    * \param reason the reason to drop the entry
    */
-  void Drop (QueueEntry en, std::string reason);
+  void Drop (AodvSendBufferEntry en, std::string reason);
   /// The maximum number of packets that we allow a routing protocol to buffer.
   uint32_t m_maxLen;
   /// The maximum period of time that a routing protocol is allowed to buffer a packet for, seconds.
-  Time m_queueTimeout;
+  Time m_sendBufferTimeout;
 };
 
 
