@@ -1,8 +1,7 @@
-#include "ns3/core-module.h"
-#include "ns3/network-module.h"
 #include "ns3/application.h"
 
-#include "ns3/stats-module.h"
+#ifndef PACKET_TAGS_H
+#define PACKET_TAGS_H
 
 using namespace ns3;
 
@@ -116,3 +115,5 @@ public:
 private:
     double m_energyDepletionRate;
 };
+
+#endif /* PACKET_TAGS_H */
