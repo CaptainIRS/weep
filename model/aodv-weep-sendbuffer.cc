@@ -16,15 +16,15 @@ uint32_t
 AodvSendBuffer::GetSize ()
 {
   Purge ();
-  return m_queue.size ();
+  return m_sendBuffer.size ();
 }
 
 bool
 AodvSendBuffer::Enqueue (AodvSendBufferEntry & entry)
 {
   Purge ();
-  for (std::vector<AodvSendBufferEntry>::const_iterator i = m_queue.begin (); i
-       != m_queue.end (); ++i)
+  for (std::vector<AodvSendBufferEntry>::const_iterator i = m_sendBuffer.begin (); i
+       != m_sendBuffer.end (); ++i)
     {
       if ((i->GetPacket ()->GetUid () == entry.GetPacket ()->GetUid ())
           && (i->GetIpv4Header ().GetDestination ()
@@ -34,12 +34,12 @@ AodvSendBuffer::Enqueue (AodvSendBufferEntry & entry)
         }
     }
   entry.SetExpireTime (m_sendBufferTimeout);
-  if (m_queue.size () == m_maxLen)
+  if (m_sendBuffer.size () == m_maxLen)
     {
-      Drop (m_queue.front (), "Drop the most aged packet"); // Drop the most aged packet
-      m_queue.erase (m_queue.begin ());
+      Drop (m_sendBuffer.front (), "Drop the most aged packet"); // Drop the most aged packet
+      m_sendBuffer.erase (m_sendBuffer.begin ());
     }
-  m_queue.push_back (entry);
+  m_sendBuffer.push_back (entry);
   return true;
 }
 
@@ -48,29 +48,29 @@ AodvSendBuffer::DropPacketWithDst (Ipv4Address dst)
 {
   NS_LOG_FUNCTION (this << dst);
   Purge ();
-  for (std::vector<AodvSendBufferEntry>::iterator i = m_queue.begin (); i
-       != m_queue.end (); ++i)
+  for (std::vector<AodvSendBufferEntry>::iterator i = m_sendBuffer.begin (); i
+       != m_sendBuffer.end (); ++i)
     {
       if (i->GetIpv4Header ().GetDestination () == dst)
         {
           Drop (*i, "DropPacketWithDst ");
         }
     }
-  auto new_end = std::remove_if (m_queue.begin (), m_queue.end (),
+  auto new_end = std::remove_if (m_sendBuffer.begin (), m_sendBuffer.end (),
                                  [&](const AodvSendBufferEntry& en) { return en.GetIpv4Header ().GetDestination () == dst; });
-  m_queue.erase (new_end, m_queue.end ());
+  m_sendBuffer.erase (new_end, m_sendBuffer.end ());
 }
 
 bool
 AodvSendBuffer::Dequeue (Ipv4Address dst, AodvSendBufferEntry & entry)
 {
   Purge ();
-  for (std::vector<AodvSendBufferEntry>::iterator i = m_queue.begin (); i != m_queue.end (); ++i)
+  for (std::vector<AodvSendBufferEntry>::iterator i = m_sendBuffer.begin (); i != m_sendBuffer.end (); ++i)
     {
       if (i->GetIpv4Header ().GetDestination () == dst)
         {
           entry = *i;
-          m_queue.erase (i);
+          m_sendBuffer.erase (i);
           return true;
         }
     }
@@ -80,8 +80,8 @@ AodvSendBuffer::Dequeue (Ipv4Address dst, AodvSendBufferEntry & entry)
 bool
 AodvSendBuffer::Find (Ipv4Address dst)
 {
-  for (std::vector<AodvSendBufferEntry>::const_iterator i = m_queue.begin (); i
-       != m_queue.end (); ++i)
+  for (std::vector<AodvSendBufferEntry>::const_iterator i = m_sendBuffer.begin (); i
+       != m_sendBuffer.end (); ++i)
     {
       if (i->GetIpv4Header ().GetDestination () == dst)
         {
@@ -113,16 +113,16 @@ void
 AodvSendBuffer::Purge ()
 {
   IsExpired pred;
-  for (std::vector<AodvSendBufferEntry>::iterator i = m_queue.begin (); i
-       != m_queue.end (); ++i)
+  for (std::vector<AodvSendBufferEntry>::iterator i = m_sendBuffer.begin (); i
+       != m_sendBuffer.end (); ++i)
     {
       if (pred (*i))
         {
           Drop (*i, "Drop outdated packet ");
         }
     }
-  m_queue.erase (std::remove_if (m_queue.begin (), m_queue.end (), pred),
-                 m_queue.end ());
+  m_sendBuffer.erase (std::remove_if (m_sendBuffer.begin (), m_sendBuffer.end (), pred),
+                 m_sendBuffer.end ());
 }
 
 void
