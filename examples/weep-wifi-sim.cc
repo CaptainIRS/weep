@@ -5,7 +5,6 @@
 #include <cmath>
 #include <math.h>
 #include <sstream>
-#include "ns3/core-module.h"
 #include "ns3/energy-module.h"
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/flow-monitor.h"
@@ -17,6 +16,7 @@
 #include "ns3/config-store-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/packet.h"
+#include "ns3/string.h"
 #include "ns3/wifi-radio-energy-model-helper.h"
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/aodv-weep-helper.h"
@@ -174,6 +174,7 @@ void
 WeepWifiSimulation::InstallInternetStack ()
 {
   AodvWeepHelper aodv;
+  aodv.Set("PacketScheduler", StringValue ("ns3::weep::AodvFcfsScheduler"));
   InternetStackHelper stack;
   stack.SetRoutingHelper (aodv);
   stack.Install (nodes);

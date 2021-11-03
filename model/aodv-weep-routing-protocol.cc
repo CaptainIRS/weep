@@ -4,6 +4,11 @@
   if (m_ipv4) { std::clog << "[node " << m_ipv4->GetObject<Node> ()->GetId () << "] "; }
 
 #include "aodv-weep-routing-protocol.h"
+#include "aodv-weep-queue.h"
+#include "aodv-fcfs-scheduler.h"
+#include "packet-tags.h"
+#include "ns3/energy-source.h"
+#include "ns3/energy-source-container.h"
 #include "ns3/log.h"
 #include "ns3/boolean.h"
 #include "ns3/random-variable-stream.h"
@@ -138,7 +143,7 @@ AodvWeepRoutingProtocol::AodvWeepRoutingProtocol ()
     m_gratuitousReply (true),
     m_enableHello (false),
     m_routingTable (m_deletePeriod),
-    m_queue (m_maxQueueLen, m_maxQueueTime),
+    m_sendBuffer (m_maxQueueLen, m_maxQueueTime),
     m_requestId (0),
     m_seqNo (0),
     m_rreqIdCache (m_pathDiscoveryTime),
@@ -271,6 +276,11 @@ AodvWeepRoutingProtocol::GetTypeId (void)
                    StringValue ("ns3::UniformRandomVariable"),
                    MakePointerAccessor (&AodvWeepRoutingProtocol::m_uniformRandomVariable),
                    MakePointerChecker<UniformRandomVariable> ())
+    .AddAttribute ("PacketScheduler",
+                   "Scheduler which has the scheduling algorithm for departing packets",
+                   IntegerValue (0),
+                   MakePointerAccessor (&AodvWeepRoutingProtocol::m_packetScheduler),
+                   MakePointerChecker<PacketScheduler> ())
   ;
   return tid;
 }
@@ -279,13 +289,13 @@ void
 AodvWeepRoutingProtocol::SetMaxQueueLen (uint32_t len)
 {
   m_maxQueueLen = len;
-  m_queue.SetMaxQueueLen (len);
+  m_sendBuffer.SetMaxQueueLen (len);
 }
 void
 AodvWeepRoutingProtocol::SetMaxQueueTime (Time t)
 {
   m_maxQueueTime = t;
-  m_queue.SetQueueTimeout (t);
+  m_sendBuffer.SetQueueTimeout (t);
 }
 
 AodvWeepRoutingProtocol::~AodvWeepRoutingProtocol ()
@@ -346,7 +356,6 @@ AodvWeepRoutingProtocol::Start ()
   m_rerrRateLimitTimer.SetFunction (&AodvWeepRoutingProtocol::RerrRateLimitTimerExpire,
                                     this);
   m_rerrRateLimitTimer.Schedule (Seconds (1));
-
 }
 
 Ptr<Ipv4Route>
@@ -407,7 +416,7 @@ AodvWeepRoutingProtocol::DeferredRouteOutput (Ptr<const Packet> p, const Ipv4Hea
   NS_ASSERT (p != 0 && p != Ptr<Packet> ());
 
   AodvSendBufferEntry newEntry (p, header, ucb, ecb);
-  bool result = m_queue.Enqueue (newEntry);
+  bool result = m_sendBuffer.Enqueue (newEntry);
   if (result)
     {
       NS_LOG_LOGIC ("Add packet " << p->GetUid () << " to queue. Protocol " << (uint16_t) header.GetProtocol ());
@@ -489,7 +498,7 @@ AodvWeepRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
               else
                 {
                   NS_LOG_ERROR ("Unable to deliver packet locally due to null callback " << p->GetUid () << " from " << origin);
-                  ecb (p, header, Socket::ERROR_NOROUTETOHOST);
+                  m_packetScheduler->Enqueue(CreateObject<DataPacketQueueEntry>(ecb, p, header, Socket::ERROR_NOROUTETOHOST));
                 }
               if (!m_enableBroadcast)
                 {
@@ -512,7 +521,7 @@ AodvWeepRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
                   if (m_routingTable.LookupRoute (dst, toBroadcast))
                     {
                       Ptr<Ipv4Route> route = toBroadcast.GetRoute ();
-                      ucb (route, packet, header);
+                      m_packetScheduler->Enqueue(CreateObject<DataPacketQueueEntry>(ucb, route, packet, header));
                     }
                   else
                     {
@@ -546,7 +555,7 @@ AodvWeepRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
       else
         {
           NS_LOG_ERROR ("Unable to deliver packet locally due to null callback " << p->GetUid () << " from " << origin);
-          ecb (p, header, Socket::ERROR_NOROUTETOHOST);
+          m_packetScheduler->Enqueue(CreateObject<DataPacketQueueEntry>(ecb, p, header, Socket::ERROR_NOROUTETOHOST));
         }
       return true;
     }
@@ -555,7 +564,7 @@ AodvWeepRoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   if (m_ipv4->IsForwarding (iif) == false)
     {
       NS_LOG_LOGIC ("Forwarding disabled for this interface");
-      ecb (p, header, Socket::ERROR_NOROUTETOHOST);
+      m_packetScheduler->Enqueue(CreateObject<DataPacketQueueEntry>(ecb, p, header, Socket::ERROR_NOROUTETOHOST));
       return true;
     }
 
@@ -600,7 +609,7 @@ AodvWeepRoutingProtocol::Forwarding (Ptr<const Packet> p, const Ipv4Header & hea
           m_nb.Update (route->GetGateway (), m_activeRouteTimeout);
           m_nb.Update (toOrigin.GetNextHop (), m_activeRouteTimeout);
 
-          ucb (route, p, header);
+          m_packetScheduler->Enqueue(CreateObject<DataPacketQueueEntry>(ucb, route, p, header));
           return true;
         }
       else
@@ -1050,7 +1059,7 @@ AodvWeepRoutingProtocol::SendRequest (Ipv4Address dst)
         }
       NS_LOG_DEBUG ("Send RREQ with id " << rreqHeader.GetId () << " to socket");
       m_lastBcastTime = Simulator::Now ();
-      Simulator::Schedule (Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10))), &AodvWeepRoutingProtocol::SendTo, this, socket, packet, destination);
+      m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, destination, socket));
     }
   ScheduleRreqRetry (dst);
 }
@@ -1381,7 +1390,7 @@ AodvWeepRoutingProtocol::RecvRequest (Ptr<Packet> p, Ipv4Address receiver, Ipv4A
           destination = iface.GetBroadcast ();
         }
       m_lastBcastTime = Simulator::Now ();
-      Simulator::Schedule (Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10))), &AodvWeepRoutingProtocol::SendTo, this, socket, packet, destination);
+      m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, destination, socket));
 
     }
 }
@@ -1407,9 +1416,23 @@ AodvWeepRoutingProtocol::SendReply (RreqHeader const & rreqHeader, RoutingTableE
   packet->AddHeader (rrepHeader);
   TypeHeader tHeader (AODV_WEEP_TYPE_RREP);
   packet->AddHeader (tHeader);
+
+  Ptr<EnergySource> energySource = m_ipv4->GetObject<Node>()->GetObject<EnergySourceContainer>()->Get(0);
+  MaximumEnergyTag maxEnergyTag;
+  maxEnergyTag.SetMaximumEnergy(energySource->GetInitialEnergy());
+  packet->AddPacketTag(maxEnergyTag);
+
+  CurrentResidualEnergyTag currentEnergyTag;
+  currentEnergyTag.SetCurrentResidualEnergy(energySource->GetRemainingEnergy());
+  packet->AddPacketTag(currentEnergyTag);
+
+  TimestampTag timestamp;
+  timestamp.SetTimestamp (Simulator::Now ());
+  packet->AddPacketTag (timestamp);
+
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toOrigin.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_WEEP_PORT));
+  m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, toOrigin.GetNextHop (), socket));
 }
 
 void
@@ -1444,7 +1467,7 @@ AodvWeepRoutingProtocol::SendReplyByIntermediateNode (RoutingTableEntry & toDst,
   packet->AddHeader (tHeader);
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toOrigin.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_WEEP_PORT));
+  m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, toOrigin.GetNextHop (), socket));
 
   // Generating gratuitous RREPs
   if (gratRep)
@@ -1462,7 +1485,7 @@ AodvWeepRoutingProtocol::SendReplyByIntermediateNode (RoutingTableEntry & toDst,
       Ptr<Socket> socket = FindSocketWithInterfaceAddress (toDst.GetInterface ());
       NS_ASSERT (socket);
       NS_LOG_LOGIC ("Send gratuitous RREP " << packet->GetUid ());
-      socket->SendTo (packetToDst, 0, InetSocketAddress (toDst.GetNextHop (), AODV_WEEP_PORT));
+      m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packetToDst, toOrigin.GetNextHop (), socket));
     }
 }
 
@@ -1482,7 +1505,7 @@ AodvWeepRoutingProtocol::SendReplyAck (Ipv4Address neighbor)
   m_routingTable.LookupRoute (neighbor, toNeighbor);
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toNeighbor.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (neighbor, AODV_WEEP_PORT));
+  m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, neighbor, socket));
 }
 
 void
@@ -1618,7 +1641,7 @@ AodvWeepRoutingProtocol::RecvReply (Ptr<Packet> p, Ipv4Address receiver, Ipv4Add
   packet->AddHeader (tHeader);
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toOrigin.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_WEEP_PORT));
+  m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, toOrigin.GetNextHop (), socket));
 }
 
 void
@@ -1752,7 +1775,7 @@ AodvWeepRoutingProtocol::RouteRequestTimerExpire (Ipv4Address dst)
       m_addressReqTimer.erase (dst);
       m_routingTable.DeleteRoute (dst);
       NS_LOG_DEBUG ("Route not found. Drop all packets with dst " << dst);
-      m_queue.DropPacketWithDst (dst);
+      m_sendBuffer.DropPacketWithDst (dst);
       return;
     }
 
@@ -1766,7 +1789,7 @@ AodvWeepRoutingProtocol::RouteRequestTimerExpire (Ipv4Address dst)
       NS_LOG_DEBUG ("Route down. Stop search. Drop packet with destination " << dst);
       m_addressReqTimer.erase (dst);
       m_routingTable.DeleteRoute (dst);
-      m_queue.DropPacketWithDst (dst);
+      m_sendBuffer.DropPacketWithDst (dst);
     }
 }
 
@@ -1847,7 +1870,7 @@ AodvWeepRoutingProtocol::SendHello ()
           destination = iface.GetBroadcast ();
         }
       Time jitter = Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10)));
-      Simulator::Schedule (jitter, &AodvWeepRoutingProtocol::SendTo, this, socket, packet, destination);
+      m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, destination, socket));
     }
 }
 
@@ -1856,7 +1879,7 @@ AodvWeepRoutingProtocol::SendPacketFromQueue (Ipv4Address dst, Ptr<Ipv4Route> ro
 {
   NS_LOG_FUNCTION (this);
   AodvSendBufferEntry aodvSendBufferEntry;
-  while (m_queue.Dequeue (dst, aodvSendBufferEntry))
+  while (m_sendBuffer.Dequeue (dst, aodvSendBufferEntry))
     {
       DeferredRouteOutputTag tag;
       Ptr<Packet> p = ConstCast<Packet> (aodvSendBufferEntry.GetPacket ());
@@ -1871,7 +1894,7 @@ AodvWeepRoutingProtocol::SendPacketFromQueue (Ipv4Address dst, Ptr<Ipv4Route> ro
       Ipv4Header header = aodvSendBufferEntry.GetIpv4Header ();
       header.SetSource (route->GetSource ());
       header.SetTtl (header.GetTtl () + 1); // compensate extra TTL decrement by fake loopback routing
-      ucb (route, p, header);
+      m_packetScheduler->Enqueue(CreateObject<DataPacketQueueEntry>(ucb, route, p, header));
     }
 }
 
@@ -1961,7 +1984,7 @@ AodvWeepRoutingProtocol::SendRerrWhenNoRouteToForward (Ipv4Address dst,
           toOrigin.GetInterface ());
       NS_ASSERT (socket);
       NS_LOG_LOGIC ("Unicast RERR to the source of the data transmission");
-      socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_WEEP_PORT));
+      m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, toOrigin.GetNextHop (), socket));
     }
   else
     {
@@ -1982,7 +2005,7 @@ AodvWeepRoutingProtocol::SendRerrWhenNoRouteToForward (Ipv4Address dst,
             {
               destination = iface.GetBroadcast ();
             }
-          socket->SendTo (packet->Copy (), 0, InetSocketAddress (destination, AODV_WEEP_PORT));
+          m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, destination, socket));
         }
     }
 }
@@ -2017,7 +2040,7 @@ AodvWeepRoutingProtocol::SendRerrMessage (Ptr<Packet> packet, std::vector<Ipv4Ad
           Ptr<Socket> socket = FindSocketWithInterfaceAddress (toPrecursor.GetInterface ());
           NS_ASSERT (socket);
           NS_LOG_LOGIC ("one precursor => unicast RERR to " << toPrecursor.GetDestination () << " from " << toPrecursor.GetInterface ().GetLocal ());
-          Simulator::Schedule (Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10))), &AodvWeepRoutingProtocol::SendTo, this, socket, packet, precursors.front ());
+          m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(packet, precursors.front(), socket));
           m_rerrCount++;
         }
       return;
@@ -2052,7 +2075,7 @@ AodvWeepRoutingProtocol::SendRerrMessage (Ptr<Packet> packet, std::vector<Ipv4Ad
         {
           destination = i->GetBroadcast ();
         }
-      Simulator::Schedule (Time (MilliSeconds (m_uniformRandomVariable->GetInteger (0, 10))), &AodvWeepRoutingProtocol::SendTo, this, socket, p, destination);
+      m_packetScheduler->Enqueue(CreateObject<ControlPacketQueueEntry>(p, destination, socket));
     }
 }
 

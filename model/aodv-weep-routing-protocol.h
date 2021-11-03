@@ -8,6 +8,7 @@
 #include "aodv-weep-packet.h"
 #include "aodv-weep-neighbor.h"
 #include "aodv-weep-dpd.h"
+#include "packet-scheduler-base.h"
 #include "ns3/node.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/output-stream-wrapper.h"
@@ -218,7 +219,7 @@ private:
   /// Routing table
   RoutingTable m_routingTable;
   /// A "drop-front" queue used by the routing layer to buffer packets to which it does not have a route.
-  AodvSendBuffer m_queue;
+  AodvSendBuffer m_sendBuffer;
   /// Broadcast ID
   uint32_t m_requestId;
   /// Request sequence number
@@ -427,10 +428,19 @@ private:
    */
   void AckTimerExpire (Ipv4Address neighbor, Time blacklistTimeout);
 
+  /// Scheduler
+  Ptr<PacketScheduler> m_packetScheduler;
   /// Provides uniform random variables.
   Ptr<UniformRandomVariable> m_uniformRandomVariable;
   /// Keep track of the last bcast time
   Time m_lastBcastTime;
+  /// Store maximum energies of destination nodes
+  std::map<int, double> m_maximumEnergies;
+  /// Store current residual energies of destination nodes
+  std::map<int, double> m_currentResidualEnergies;
+  /// Keep track of the last energy update time
+  std::map<int, Time> m_lastEnergyUpdateTimes;
+
 };
 
 } //namespace weep

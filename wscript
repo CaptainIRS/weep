@@ -10,13 +10,16 @@ def build(bld):
     module = bld.create_ns3_module('weep', ['core', 'flow-monitor', 'internet', 'wifi'])
     module.includes = '.'
     module.source = [
+        'model/packet-tags.cc',
         'model/aodv-weep-id-cache.cc',
         'model/aodv-weep-dpd.cc',
         'model/aodv-weep-rtable.cc',
         'model/aodv-weep-sendbuffer.cc',
         'model/aodv-weep-packet.cc',
+        'model/aodv-weep-queue.cc',
         'model/aodv-weep-neighbor.cc',
         'model/aodv-weep-routing-protocol.cc',
+        'model/aodv-fcfs-scheduler.cc',
         'helper/aodv-weep-helper.cc',
         'helper/weep-helper.cc',
         ]
@@ -34,13 +37,17 @@ def build(bld):
     headers = bld(features='ns3header')
     headers.module = 'weep'
     headers.source = [
+        'model/packet-tags.h',
+        'model/packet-scheduler-base.h',
         'model/aodv-weep-id-cache.h',
         'model/aodv-weep-dpd.h',
         'model/aodv-weep-rtable.h',
         'model/aodv-weep-sendbuffer.h',
         'model/aodv-weep-packet.h',
+        'model/aodv-weep-queue.h',
         'model/aodv-weep-neighbor.h',
         'model/aodv-weep-routing-protocol.h',
+        'model/aodv-fcfs-scheduler.h',
         'helper/aodv-weep-helper.h',
         'helper/weep-helper.h',
         ]
