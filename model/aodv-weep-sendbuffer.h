@@ -1,7 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
-#ifndef AODV_WEEP_RQUEUE_H
-#define AODV_WEEP_RQUEUE_H
+#ifndef AODV_WEEP_SENDBUFFER_H
+#define AODV_WEEP_SENDBUFFER_H
 
 #include <vector>
 #include "ns3/ipv4-routing-protocol.h"
@@ -233,7 +233,7 @@ public:
 
 private:
   /// The queue
-  std::vector<AodvSendBufferEntry> m_queue;
+  std::vector<AodvSendBufferEntry> m_sendBuffer;
   /// Remove all expired entries
   void Purge ();
   /**
@@ -252,4 +252,4 @@ private:
 }  // namespace weep
 }  // namespace ns3
 
-#endif /* AODV_WEEP_RQUEUE_H */
+#endif /* AODV_WEEP_SENDBUFFER_H */
