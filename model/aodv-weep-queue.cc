@@ -14,14 +14,13 @@ TypeId
 DataPacketQueueEntry::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::weep::DataPacketQueueEntry")
-    .SetParent<PacketQueueEntry> ()
-    .AddConstructor<DataPacketQueueEntry> ()
-  ;
+                          .SetParent<PacketQueueEntry> ()
+                          .AddConstructor<DataPacketQueueEntry> ();
   return tid;
 }
 
 void
-DataPacketQueueEntry::Send ()
+BaseWeepQueueEntry::Send ()
 {
   if (m_callbackType == UNICAST_FORWARD)
     {
@@ -31,22 +30,34 @@ DataPacketQueueEntry::Send ()
     {
       m_ecb (m_packet, m_header, m_socketErrno);
     }
+  else if (m_callbackType == NONE)
+    {
+      m_socket->SendTo (m_packet->Copy (), 0, InetSocketAddress (m_destination, 654));
+    }
+}
+
+void
+BaseWeepQueueEntry::ParseHeaders ()
+{
+  switch (m_callbackType)
+    {
+    case UNICAST_FORWARD:
+    case ERROR:
+    case LOCAL_DELIVERY:
+      m_source = m_header.GetSource ();
+      m_destination = m_header.GetDestination ();
+    case NONE:
+      break;
+    }
 }
 
 TypeId
 ControlPacketQueueEntry::GetTypeId ()
 {
   static TypeId tid = TypeId ("ns3::weep::ControlPacketQueueEntry")
-    .SetParent<PacketQueueEntry> ()
-    .AddConstructor<ControlPacketQueueEntry> ()
-  ;
+                          .SetParent<PacketQueueEntry> ()
+                          .AddConstructor<ControlPacketQueueEntry> ();
   return tid;
-}
-
-void
-ControlPacketQueueEntry::Send ()
-{
-  m_socket->SendTo (m_packet->Copy(), 0, InetSocketAddress(m_destination, 654));
 }
 
 } // namespace weep

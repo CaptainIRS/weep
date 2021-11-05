@@ -15,16 +15,20 @@
 
 Benchmark::Benchmark ()
 {
+  throughputDataset.SetStyle (Gnuplot2dDataset::LINES_POINTS);
+  packetDeliveryRatioDataset.SetStyle (Gnuplot2dDataset::LINES_POINTS);
 }
 
 Gnuplot2dDataset
-Benchmark::GetThroughputDataset()
+Benchmark::GetThroughputDataset (std::string title)
 {
+  throughputDataset.SetTitle (title);
   return throughputDataset;
 }
 
 Gnuplot2dDataset
-Benchmark::GetPacketDeliveryRatioDataset()
+Benchmark::GetPacketDeliveryRatioDataset (std::string title)
 {
+  packetDeliveryRatioDataset.SetTitle (title);
   return packetDeliveryRatioDataset;
 }

@@ -1,4 +1,6 @@
 #include "ns3/application.h"
+#include "ns3/ipv4-address.h"
+#include <cstdint>
 
 #ifndef PACKET_TAGS_H
 #define PACKET_TAGS_H
@@ -9,7 +11,8 @@ using namespace ns3;
  * @brief Current timestamp (t)
  * 
  */
-class TimestampTag : public Tag {
+class TimestampTag : public Tag
+{
 public:
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
@@ -27,12 +30,12 @@ private:
   Time m_timestamp;
 };
 
-
 /**
  * @brief Radio-range rad(l)
  * 
  */
-class RadioRangeTag : public Tag {
+class RadioRangeTag : public Tag
+{
 public:
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
@@ -54,7 +57,8 @@ private:
  * @brief Maximum energy (Total energy) (El)
  * 
  */
-class MaximumEnergyTag : public Tag {
+class MaximumEnergyTag : public Tag
+{
 public:
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
@@ -76,7 +80,8 @@ private:
  * @brief  Current residual energy (remaining energy) (el(t))
  * 
  */
-class CurrentResidualEnergyTag : public Tag {
+class CurrentResidualEnergyTag : public Tag
+{
 public:
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
@@ -95,25 +100,72 @@ private:
 };
 
 /**
- * @brief Rate of energy depletion (depl-eng(i))
+ * @brief Source IP Address
  * 
  */
- class EnergyDepletionRateTag : public Tag {
+class SourceIPTag : public Tag
+{
 public:
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
-  
+
   virtual uint32_t GetSerializedSize (void) const;
   virtual void Serialize (TagBuffer i) const;
   virtual void Deserialize (TagBuffer i);
-  
-  void SetEnergyDepletionRate (double energyDepletionRate);
-  double GetEnergyDepletionRate (void) const;
-  
+
+  void SetSourceIP (Ipv4Address sourceIP);
+  Ipv4Address GetSourceIP (void) const;
+
   void Print (std::ostream &os) const;
 
 private:
-    double m_energyDepletionRate;
+  Ipv4Address m_sourceIP;
+};
+
+/**
+ * @brief Destination IP Address
+ * 
+ */
+class DestinationIPTag : public Tag
+{
+public:
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (TagBuffer i) const;
+  virtual void Deserialize (TagBuffer i);
+
+  void SetDestinationIP (Ipv4Address destinationIP);
+  Ipv4Address GetDestinationIP (void) const;
+
+  void Print (std::ostream &os) const;
+
+private:
+  Ipv4Address m_destinationIP;
+};
+
+/**
+ * @brief Destination IP Address
+ * 
+ */
+class HopCountTag : public Tag
+{
+public:
+  static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (TagBuffer i) const;
+  virtual void Deserialize (TagBuffer i);
+
+  void SetHopCount (uint32_t hopCount);
+  uint32_t GetHopCount (void) const;
+
+  void Print (std::ostream &os) const;
+
+private:
+  uint32_t m_hopCount;
 };
 
 #endif /* PACKET_TAGS_H */

@@ -8,6 +8,8 @@
 #include "aodv-weep-packet.h"
 #include "aodv-weep-neighbor.h"
 #include "aodv-weep-dpd.h"
+#include "ns3/ipv4-address.h"
+#include "ns3/ipv4-route.h"
 #include "packet-scheduler-base.h"
 #include "ns3/node.h"
 #include "ns3/random-variable-stream.h"
@@ -156,6 +158,28 @@ public:
    * \return the number of stream indices assigned by this model
    */
   int64_t AssignStreams (int64_t stream);
+
+  /**
+   * Inject WEEP metadata tags into the packet
+   * 
+   * \param packet the packet
+   */
+   void InjectMetadata (Ptr<Packet> &packet, Ipv4Address destination, RoutingTableEntry rt = RoutingTableEntry());
+
+  /**
+   * Copy WEEP metadata from packet to packet
+   * 
+   * \param fromPacket the packet to copy from
+   * \param toPacket the packet to copy to
+   */
+  void CopyMetadata (Ptr<Packet> &fromPacket, Ptr<Packet> &toPacket);
+
+  /**
+   * Extract WEEP metadata tags from the packet
+   * 
+   * \param packet the packet
+   */
+   void ExtractMetadata (Ptr<Packet> &packet);
 
 protected:
   virtual void DoInitialize (void);
@@ -351,9 +375,9 @@ private:
   //\{
   /** Forward packet from route request queue
    * \param dst destination address
-   * \param route route to use
+   * \param routingTableEntry routing table entry
    */
-  void SendPacketFromQueue (Ipv4Address dst, Ptr<Ipv4Route> route);
+  void SendPacketFromQueue (Ipv4Address dst, RoutingTableEntry routingTableEntry);
   /// Send hello
   void SendHello ();
   /** Send RREQ
@@ -366,11 +390,12 @@ private:
    */
   void SendReply (RreqHeader const & rreqHeader, RoutingTableEntry const & toOrigin);
   /** Send RREP by intermediate node
+   * \param p packet received by intermediate node
    * \param toDst routing table entry to destination
    * \param toOrigin routing table entry to originator
    * \param gratRep indicates whether a gratuitous RREP should be unicast to destination
    */
-  void SendReplyByIntermediateNode (RoutingTableEntry & toDst, RoutingTableEntry & toOrigin, bool gratRep);
+  void SendReplyByIntermediateNode (Ptr<Packet> p, RoutingTableEntry & toDst, RoutingTableEntry & toOrigin, bool gratRep);
   /** Send RREP_ACK
    * \param neighbor neighbor address
    */

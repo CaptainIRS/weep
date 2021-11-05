@@ -20,12 +20,8 @@ class WeepWifiSimulation
 public:
   WeepWifiSimulation ();
 
-  void CaseRun (uint32_t nWifis,
-                uint32_t nSinks,
-                double totalTime,
-                double range,
-                uint32_t nodeSpeed,
-                double dataStart);
+  void CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nSinks, double totalTime,
+                double range, uint32_t nodeSpeed, double dataStart);
   long double GetBytesReceived ();
   long double GetPacketsReceived ();
   long double GetBytesSent ();
@@ -42,6 +38,7 @@ private:
   long double m_packetsReceived;
   long double m_bytesSent;
   long double m_packetsSent;
+  std::string m_scheduler;
 
   NodeContainer nodes;
   NetDeviceContainer devices;
@@ -54,6 +51,5 @@ private:
   void InstallApplications ();
   void SetupMobility ();
   void InstallEnergyModels ();
-  Ptr <Socket> SetupPacketReceive (Ipv4Address addr, Ptr <Node> node );
-
+  Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
 };

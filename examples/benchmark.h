@@ -18,10 +18,12 @@ using namespace ns3;
 class Benchmark
 {
   Gnuplot2dDataset throughputDataset, packetDeliveryRatioDataset;
+
 public:
   Benchmark ();
-  void AodvFcfsQueue();
+  void AodvFcfsScheduler ();
+  void AodvWeepScheduler ();
 
-  Gnuplot2dDataset GetThroughputDataset();
-  Gnuplot2dDataset GetPacketDeliveryRatioDataset();
+  Gnuplot2dDataset GetThroughputDataset (std::string title);
+  Gnuplot2dDataset GetPacketDeliveryRatioDataset (std::string title);
 };

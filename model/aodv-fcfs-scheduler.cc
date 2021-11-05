@@ -3,6 +3,7 @@
 #include "aodv-fcfs-scheduler.h"
 #include "aodv-weep-queue.h"
 #include "ns3/log.h"
+#include "ns3/nstime.h"
 #include "ns3/ptr.h"
 #include "packet-scheduler-base.h"
 #include "ns3/simulator.h"
@@ -38,8 +39,7 @@ bool
 AodvFcfsScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
 {
   m_queue.push_back (entry);
-  Simulator::Schedule (MicroSeconds (m_uniformRandomVariable->GetInteger (0, 100)),
-                       &AodvFcfsScheduler::SendPacket, this);
+  Simulator::Schedule (Seconds (0), &AodvFcfsScheduler::SendPacket, this);
   return true;
 }
 
@@ -51,8 +51,7 @@ AodvFcfsScheduler::SendPacket ()
       Ptr<PacketQueueEntry> packet = m_queue.back ();
       packet->Send ();
       m_queue.pop_back ();
-      Simulator::Schedule (MicroSeconds (m_uniformRandomVariable->GetInteger (0, 100)),
-                           &AodvFcfsScheduler::SendPacket, this);
+      Simulator::Schedule (Seconds (0), &AodvFcfsScheduler::SendPacket, this);
     }
 }
 
