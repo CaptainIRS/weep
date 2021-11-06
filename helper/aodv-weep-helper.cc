@@ -16,6 +16,13 @@ AodvWeepHelper::AodvWeepHelper() :
   m_agentFactory.SetTypeId ("ns3::weep::AodvWeepRoutingProtocol");
 }
 
+AodvWeepHelper::AodvWeepHelper(Callback<void, double> &callback) : 
+  Ipv4RoutingHelper ()
+{
+  m_agentFactory.SetTypeId ("ns3::weep::AodvWeepRoutingProtocol");
+  m_callback = callback;
+}
+
 AodvWeepHelper* 
 AodvWeepHelper::Copy (void) const 
 {

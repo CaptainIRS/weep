@@ -131,21 +131,21 @@ main (int argc, char **argv)
 
   Benchmark benchmark;
 
-  benchmark.AodvFcfsScheduler ();
-  throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-FCFS"));
-  packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-FCFS"));
+  // benchmark.AodvFcfsScheduler ();
+  // throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-FCFS"));
+  // packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-FCFS"));
 
   benchmark.AodvWeepScheduler ();
   throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-WEEP"));
   packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-WEEP"));
 
-  benchmark.AodvSjfScheduler ();
-  throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-SJF"));
-  packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-SJF"));
+  // benchmark.AodvSjfScheduler ();
+  // throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-SJF"));
+  // packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-SJF"));
 
-  benchmark.AodvSmfScheduler ();
-  throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-SMF"));
-  packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-SMF"));
+  // benchmark.AodvSmfScheduler ();
+  // throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-SMF"));
+  // packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-SMF"));
 
   throughputPlot.SetTerminal ("png");
   throughputPlot.SetLegend ("Number of Nodes", "Throughput (Bytes/s)");

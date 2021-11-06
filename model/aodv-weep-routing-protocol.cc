@@ -2256,11 +2256,5 @@ AodvWeepRoutingProtocol::CopyMetadata(Ptr<Packet> &fromPacket, Ptr<Packet> &toPa
 
 }
 
-void
-AodvWeepRoutingProtocol::ExtractMetadata(Ptr<Packet> &packet)
-{
-
-}
-
 } //namespace weep
 } //namespace ns3

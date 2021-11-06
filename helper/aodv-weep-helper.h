@@ -7,6 +7,7 @@
 #include "ns3/node.h"
 #include "ns3/node-container.h"
 #include "ns3/ipv4-routing-helper.h"
+#include "ns3/packet-scheduler-base.h"
 
 namespace ns3 {
 /**
@@ -17,6 +18,7 @@ class AodvWeepHelper : public Ipv4RoutingHelper
 {
 public:
   AodvWeepHelper ();
+  AodvWeepHelper (Callback<void, double> &callback);
 
   /**
    * \returns pointer to clone of this AodvHelper
@@ -59,6 +61,7 @@ public:
 private:
   /** the factory to create AODV routing object */
   ObjectFactory m_agentFactory;
+  Callback<void, double> m_callback;
 };
 
 }

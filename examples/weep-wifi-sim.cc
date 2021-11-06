@@ -68,6 +68,13 @@ WeepWifiSimulation::GetPerPacketPerRouterWaitingTime ()
 }
 
 void
+WeepWifiSimulation::UpdatePerPacketPerRouterWaitingTime (double time)
+{
+  std::cout << "Called" << std::endl;
+  m_perPacketPerRouterWaitingTime += time;
+}
+
+void
 WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nSinks,
                              double totalTime, double range, uint32_t nodeSpeed, double dataStart)
 {
@@ -80,6 +87,7 @@ WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nS
   m_range = range;
   m_nodeSpeed = nodeSpeed;
   m_dataStart = dataStart;
+  m_perPacketPerRouterWaitingTime = 0;
 
   CreateNodes ();
   CreateDevices ();
@@ -172,7 +180,7 @@ WeepWifiSimulation::InstallInternetStack ()
   Ipv4AddressHelper address;
   address.SetBase ("10.1.1.0", "255.255.255.0");
   interfaces = address.Assign (devices);
-  stack.EnableAsciiIpv4All("trace.tr");
+  stack.EnableAsciiIpv4All ("trace.tr");
 }
 
 void

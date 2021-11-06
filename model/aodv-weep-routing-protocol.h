@@ -100,6 +100,15 @@ public:
   {
     m_destinationOnly = f;
   }
+
+  /**
+   * Get pointer to scheduler
+   * 
+   */
+  Ptr<PacketScheduler> GetScheduler()
+  {
+    return m_packetScheduler;
+  }
   /**
    * Get gratuitous reply flag
    * \returns the gratuitous reply flag
