@@ -61,6 +61,12 @@ WeepWifiSimulation::GetBytesSent ()
   return m_bytesSent;
 }
 
+double
+WeepWifiSimulation::GetPerPacketPerRouterWaitingTime ()
+{
+  return (double) m_perPacketPerRouterWaitingTime / 10e9;
+}
+
 void
 WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nSinks,
                              double totalTime, double range, uint32_t nodeSpeed, double dataStart)
@@ -166,6 +172,7 @@ WeepWifiSimulation::InstallInternetStack ()
   Ipv4AddressHelper address;
   address.SetBase ("10.1.1.0", "255.255.255.0");
   interfaces = address.Assign (devices);
+  stack.EnableAsciiIpv4All("trace.tr");
 }
 
 void
@@ -195,14 +202,8 @@ void
 WeepWifiSimulation::InstallEnergyModels ()
 {
   BasicEnergySourceHelper basicSourceHelper;
-  // configure energy source
   basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (10));
-  // install source
   EnergySourceContainer sources = basicSourceHelper.Install (nodes);
-  /* device energy model */
   WifiRadioEnergyModelHelper radioEnergyHelper;
-  // configure radio energy model
-  // radioEnergyHelper.Set ("TxCurrentA", DoubleValue (0.0174));
-  // install device model
   DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (devices, sources);
 }

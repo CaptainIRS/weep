@@ -3,6 +3,7 @@
 #ifndef AODV_WEEP_SCHEDULER_H
 #define AODV_WEEP_SCHEDULER_H
 
+#include <cstdint>
 #include <vector>
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv4-routing-protocol.h"
@@ -56,8 +57,8 @@ private:
   /// Update node data from packet
   void UpdateNodeData (Ptr<PacketQueueEntry> entry);
   /// Packet queues
-  std::vector<Ptr<PacketQueueEntry>> m_level1Queue;
-  std::set<std::pair<double, Ptr<DataPacketQueueEntry>>> m_level2Queue, m_level3Queue;
+  std::vector<std::pair<uint64_t, Ptr<PacketQueueEntry>>> m_level1Queue;
+  std::set<std::tuple<double, uint64_t, Ptr<DataPacketQueueEntry>>> m_level2Queue, m_level3Queue;
   /// Random variable generator to generate jitter
   Ptr<UniformRandomVariable> m_uniformRandomVariable;
   /// Depletion rates

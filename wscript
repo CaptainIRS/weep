@@ -21,6 +21,8 @@ def build(bld):
         'model/aodv-weep-routing-protocol.cc',
         'model/aodv-weep-scheduler.cc',
         'model/aodv-fcfs-scheduler.cc',
+        'model/aodv-sjf-scheduler.cc',
+        'model/aodv-smf-scheduler.cc',
         'helper/aodv-weep-helper.cc',
         'helper/weep-helper.cc',
         ]
@@ -50,6 +52,8 @@ def build(bld):
         'model/aodv-weep-routing-protocol.h',
         'model/aodv-weep-scheduler.h',
         'model/aodv-fcfs-scheduler.h',
+        'model/aodv-sjf-scheduler.h',
+        'model/aodv-smf-scheduler.h',
         'helper/aodv-weep-helper.h',
         'helper/weep-helper.h',
         ]

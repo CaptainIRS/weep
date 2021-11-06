@@ -7,6 +7,7 @@
 #include "ns3/ptr.h"
 #include "packet-scheduler-base.h"
 #include "ns3/simulator.h"
+#include <utility>
 
 namespace ns3 {
 
@@ -38,7 +39,7 @@ AodvFcfsScheduler::GetTypeId ()
 bool
 AodvFcfsScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
 {
-  m_queue.push_back (entry);
+  m_queue.push_back (std::make_pair (Simulator::Now ().GetNanoSeconds (), entry));
   Simulator::Schedule (Seconds (0), &AodvFcfsScheduler::SendPacket, this);
   return true;
 }
@@ -48,7 +49,10 @@ AodvFcfsScheduler::SendPacket ()
 {
   if (!m_queue.empty ())
     {
-      Ptr<PacketQueueEntry> packet = m_queue.back ();
+      auto entry = m_queue.back ();
+      auto time = entry.first;
+      auto packet = entry.second;
+      m_perPacketWaitingTimeTrace (Simulator::Now ().GetNanoSeconds () - time);
       packet->Send ();
       m_queue.pop_back ();
       Simulator::Schedule (Seconds (0), &AodvFcfsScheduler::SendPacket, this);

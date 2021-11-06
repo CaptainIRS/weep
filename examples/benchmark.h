@@ -23,6 +23,8 @@ public:
   Benchmark ();
   void AodvFcfsScheduler ();
   void AodvWeepScheduler ();
+  void AodvSjfScheduler ();
+  void AodvSmfScheduler ();
 
   Gnuplot2dDataset GetThroughputDataset (std::string title);
   Gnuplot2dDataset GetPacketDeliveryRatioDataset (std::string title);

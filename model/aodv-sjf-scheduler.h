@@ -1,17 +1,19 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
-#ifndef AODV_FCFS_SCHEDULER_H
-#define AODV_FCFS_SCHEDULER_H
+#ifndef AODV_SJF_SCHEDULER_H
+#define AODV_SJF_SCHEDULER_H
 
 #include "ns3/random-variable-stream.h"
 #include "packet-scheduler-base.h"
 #include <cstdint>
+#include <functional>
+#include <queue>
 
 namespace ns3 {
 
 namespace weep {
 
-class AodvFcfsScheduler : public PacketScheduler
+class AodvSjfScheduler : public PacketScheduler
 {
 public:
   /**
@@ -20,8 +22,8 @@ public:
    */
   static TypeId GetTypeId (void);
 
-  AodvFcfsScheduler ();
-  AodvFcfsScheduler (uint32_t maxLen);
+  AodvSjfScheduler ();
+  AodvSjfScheduler (uint32_t maxLen);
 
   bool Enqueue (Ptr<PacketQueueEntry> entry);
 
@@ -29,17 +31,17 @@ public:
 
 private:
   /// Packet queue
-  std::vector<std::pair<uint64_t, Ptr<PacketQueueEntry>>> m_queue;
+  std::priority_queue<std::tuple<uint32_t, uint64_t, Ptr<PacketQueueEntry>>> m_queue;
   /// Random variable generator to generate jitter
   Ptr<UniformRandomVariable> m_uniformRandomVariable;
   /// The maximum number of packets that we allow in the scheduler queue
   uint32_t m_maxLen;
 };
 
-NS_OBJECT_ENSURE_REGISTERED (AodvFcfsScheduler);
+NS_OBJECT_ENSURE_REGISTERED (AodvSjfScheduler);
 
 } // namespace weep
 
 } // namespace ns3
 
-#endif /* AODV_FCFS_SCHEDULER_H */
+#endif /* AODV_SJF_SCHEDULER_H */

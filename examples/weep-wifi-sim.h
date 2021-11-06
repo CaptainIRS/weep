@@ -26,6 +26,7 @@ public:
   long double GetPacketsReceived ();
   long double GetBytesSent ();
   long double GetPacketsSent ();
+  double GetPerPacketPerRouterWaitingTime();
 
 private:
   uint32_t m_nWifis;
@@ -38,6 +39,7 @@ private:
   long double m_packetsReceived;
   long double m_bytesSent;
   long double m_packetsSent;
+  uint64_t m_perPacketPerRouterWaitingTime;
   std::string m_scheduler;
 
   NodeContainer nodes;
@@ -51,5 +53,6 @@ private:
   void InstallApplications ();
   void SetupMobility ();
   void InstallEnergyModels ();
+  void UpdatePerPacketPerRouterWaitingTime(double waitingTime);
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
 };

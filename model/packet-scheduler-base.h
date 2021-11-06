@@ -8,6 +8,8 @@
 #include "ns3/nstime.h"
 #include "ns3/object.h"
 #include "ns3/packet.h"
+#include "ns3/traced-callback.h"
+#include <cstdint>
 
 namespace ns3 {
 
@@ -70,7 +72,13 @@ public:
   GetTypeId ()
   {
     static TypeId tid =
-        TypeId ("ns3::weep::PacketScheduler").SetParent<Object> ().SetGroupName ("AodvWeep");
+        TypeId ("ns3::weep::PacketScheduler")
+            .SetParent<Object> ()
+            .SetGroupName ("AodvWeep")
+            .AddTraceSource (
+                "PerPacketWaitingTime", "Waiting time for a packet",
+                MakeTraceSourceAccessor (&PacketScheduler::m_perPacketWaitingTimeTrace),
+                "ns3::weep::PacketScheduler::PerPacketWaitingTimeTraceCallback");
     return tid;
   }
   PacketScheduler () = default;
@@ -84,11 +92,14 @@ public:
     m_nodeAddress = addr;
   }
 
+  typedef void (*PerPacketWaitingTimeTraceCallback) (uint64_t);
+
 protected:
   uint32_t m_size;
   uint32_t m_maxSize;
   Time m_maxDelay;
   Ipv4Address m_nodeAddress;
+  TracedCallback<uint64_t> m_perPacketWaitingTimeTrace;
 };
 
 NS_OBJECT_ENSURE_REGISTERED (PacketScheduler);

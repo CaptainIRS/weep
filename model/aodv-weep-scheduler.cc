@@ -15,6 +15,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
 
 namespace ns3 {
@@ -26,10 +27,12 @@ namespace weep {
 TypeId
 AodvWeepScheduler::GetTypeId ()
 {
-  static TypeId tid = TypeId ("ns3::weep::AodvWeepScheduler")
-                          .SetParent<PacketScheduler> ()
-                          .SetGroupName ("AodvWeep")
-                          .AddConstructor<AodvWeepScheduler> ();
+  static TypeId tid =
+      TypeId ("ns3::weep::AodvWeepScheduler")
+          .SetParent<PacketScheduler> ()
+          .SetGroupName ("AodvWeep")
+          .AddConstructor<AodvWeepScheduler> ();
+  ;
   return tid;
 }
 
@@ -48,12 +51,12 @@ AodvWeepScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
       if (m_sessionsInL2Queue.find (session) == m_sessionsInL2Queue.end ())
         {
           m_sessionsInL2Queue.insert (session);
-          m_level2Queue.insert (std::make_pair (weight, dataPacketEntry));
+          m_level2Queue.insert (std::make_tuple (weight, Simulator::Now().GetNanoSeconds(), dataPacketEntry));
           NS_LOG_DEBUG ("Size of level 2 queue: " << m_level2Queue.size ());
         }
       else
         {
-          m_level3Queue.insert (std::make_pair (weight, dataPacketEntry));
+          m_level3Queue.insert (std::make_tuple (weight, Simulator::Now().GetNanoSeconds(), dataPacketEntry));
           NS_LOG_DEBUG ("Size of level 3 queue: " << m_level3Queue.size ());
         }
     }
@@ -64,8 +67,8 @@ AodvWeepScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
           UpdateNodeData (entry);
           return true;
         }
-      m_level1Queue.push_back (entry);
-      NS_LOG_DEBUG ("Size of level 1 queue: " << m_level1Queue.size ());
+      m_level1Queue.push_back (std::make_pair(Simulator::Now().GetNanoSeconds(), entry));
+      // NS_LOG_DEBUG ("Size of level 1 queue: " << m_level1Queue.size ());
     }
 
   Simulator::Schedule (MicroSeconds (0), &AodvWeepScheduler::SendPacket, this);
@@ -77,7 +80,9 @@ AodvWeepScheduler::SendPacket ()
 {
   while (!m_level1Queue.empty ())
     {
-      auto packet = m_level1Queue.back ();
+      auto packet = m_level1Queue.back ().second;
+      auto time = m_level1Queue.back ().first;
+      m_perPacketWaitingTimeTrace(Simulator::Now().GetNanoSeconds() - time);
       m_level1Queue.pop_back ();
       packet->Send ();
     }
@@ -85,7 +90,13 @@ AodvWeepScheduler::SendPacket ()
   auto lenq3 = m_level3Queue.size ();
   while (!m_level2Queue.empty ())
     {
-      auto packet = m_level2Queue.begin ()->second;
+      if (m_level3Queue.empty ())
+        {
+          break;
+        }
+      auto packet = std::get<2>(*m_level3Queue.begin ());
+      auto time = std::get<1>(*m_level3Queue.begin ());
+      m_perPacketWaitingTimeTrace(Simulator::Now().GetNanoSeconds() - time);
       m_level2Queue.erase (m_level2Queue.begin ());
       packet->Send ();
     }
@@ -96,12 +107,13 @@ AodvWeepScheduler::SendPacket ()
     {
       if (forwarded >= packetsToBeForwarded)
         break;
-      auto packet = m_level3Queue.begin ()->second;
+      auto packet = std::get<2>(*m_level3Queue.begin ());
+      auto entryTime = std::get<1>(*m_level3Queue.begin ());
       auto session = packet->GetSessionId ();
       if (m_sessionsInL2Queue.find (session) == m_sessionsInL2Queue.end ())
         {
           m_sessionsInL2Queue.insert (session);
-          m_level2Queue.insert (std::make_pair (CalculateWeight (packet), packet));
+          m_level2Queue.insert (std::make_tuple (CalculateWeight (packet), entryTime, packet));
           m_level3Queue.erase (m_level3Queue.begin ());
           forwarded++;
         }

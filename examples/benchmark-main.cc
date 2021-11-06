@@ -64,6 +64,58 @@ Benchmark::AodvWeepScheduler ()
     }
 }
 
+void
+Benchmark::AodvSjfScheduler ()
+{
+  WeepWifiSimulation test;
+  double totalTime = 20.0;
+  double range = 10.0;
+  double dataStart = 1.0;
+  std::vector<int> nodes = {3, 6, 9, 12};
+  std::vector<int> speeds = {1, 1, 1, 1};
+
+  for (int i = 0; i < 4; i++)
+    {
+      uint32_t nWifis = nodes[i];
+      uint32_t nSinks = 2;
+      std::cout << "Runnning AODV SJF Scheduler for " << nWifis << " nodes" << std::endl;
+      auto test = WeepWifiSimulation ();
+      test.CaseRun ("ns3::weep::AodvSjfScheduler", nWifis, nSinks, totalTime, range, speeds[i],
+                    dataStart);
+      std::cout << "Throughput: " << test.GetBytesReceived () / totalTime << " Bps" << std::endl;
+      std::cout << "Packet Delivery Ratio: " << test.GetPacketsReceived () / test.GetPacketsSent ()
+                << std::endl;
+      throughputDataset.Add (nWifis, test.GetBytesReceived () / totalTime);
+      packetDeliveryRatioDataset.Add (nWifis, test.GetPacketsReceived () / test.GetPacketsSent ());
+    }
+}
+
+void
+Benchmark::AodvSmfScheduler ()
+{
+  WeepWifiSimulation test;
+  double totalTime = 20.0;
+  double range = 10.0;
+  double dataStart = 1.0;
+  std::vector<int> nodes = {3, 6, 9, 12};
+  std::vector<int> speeds = {1, 1, 1, 1};
+
+  for (int i = 0; i < 4; i++)
+    {
+      uint32_t nWifis = nodes[i];
+      uint32_t nSinks = 2;
+      std::cout << "Runnning AODV SMF Scheduler for " << nWifis << " nodes" << std::endl;
+      auto test = WeepWifiSimulation ();
+      test.CaseRun ("ns3::weep::AodvSmfScheduler", nWifis, nSinks, totalTime, range, speeds[i],
+                    dataStart);
+      std::cout << "Throughput: " << test.GetBytesReceived () / totalTime << " Bps" << std::endl;
+      std::cout << "Packet Delivery Ratio: " << test.GetPacketsReceived () / test.GetPacketsSent ()
+                << std::endl;
+      throughputDataset.Add (nWifis, test.GetBytesReceived () / totalTime);
+      packetDeliveryRatioDataset.Add (nWifis, test.GetPacketsReceived () / test.GetPacketsSent ());
+    }
+}
+
 int
 main (int argc, char **argv)
 {
@@ -79,15 +131,21 @@ main (int argc, char **argv)
 
   Benchmark benchmark;
 
+  benchmark.AodvFcfsScheduler ();
+  throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-FCFS"));
+  packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-FCFS"));
+
   benchmark.AodvWeepScheduler ();
   throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-WEEP"));
   packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-WEEP"));
 
-  benchmark = Benchmark ();
+  benchmark.AodvSjfScheduler ();
+  throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-SJF"));
+  packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-SJF"));
 
-  benchmark.AodvFcfsScheduler ();
-  throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-FCFS"));
-  packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-FCFS"));
+  benchmark.AodvSmfScheduler ();
+  throughputPlot.AddDataset (benchmark.GetThroughputDataset ("AODV-SMF"));
+  packetDeliveryRatioPlot.AddDataset (benchmark.GetPacketDeliveryRatioDataset ("AODV-SMF"));
 
   throughputPlot.SetTerminal ("png");
   throughputPlot.SetLegend ("Number of Nodes", "Throughput (Bytes/s)");

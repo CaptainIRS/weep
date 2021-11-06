@@ -146,7 +146,7 @@ private:
 };
 
 /**
- * @brief Destination IP Address
+ * @brief Hop Count
  * 
  */
 class HopCountTag : public Tag
