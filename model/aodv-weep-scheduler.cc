@@ -90,12 +90,8 @@ AodvWeepScheduler::SendPacket ()
   auto lenq3 = m_level3Queue.size ();
   while (!m_level2Queue.empty ())
     {
-      if (m_level3Queue.empty ())
-        {
-          break;
-        }
-      auto packet = std::get<2>(*m_level3Queue.begin ());
-      auto time = std::get<1>(*m_level3Queue.begin ());
+      auto packet = std::get<2>(*m_level2Queue.begin ());
+      auto time = std::get<1>(*m_level2Queue.begin ());
       m_perPacketWaitingTimeTrace(Simulator::Now().GetNanoSeconds() - time);
       m_level2Queue.erase (m_level2Queue.begin ());
       packet->Send ();
