@@ -45,12 +45,13 @@ AodvWeepScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
           UpdateNodeData (entry);
           return true;
         }
+      auto weight = CalculateWeight (dataPacketEntry);
       auto session = dataPacketEntry->GetSessionId ();
       if (m_sessionsInL2Queue.find (session) == m_sessionsInL2Queue.end ())
         {
           m_sessionsInL2Queue.insert (session);
-          m_level2Queue.push_back (
-              std::make_pair (Simulator::Now ().GetNanoSeconds (), dataPacketEntry));
+          m_level2Queue.insert (
+              std::make_tuple (weight, Simulator::Now ().GetNanoSeconds (), dataPacketEntry));
           if (m_level2Queue.size () > 2)
             {
               NS_LOG_DEBUG ("Size of level 2 queue: " << m_level2Queue.size ());
@@ -58,7 +59,6 @@ AodvWeepScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
         }
       else
         {
-          auto weight = CalculateWeight (dataPacketEntry);
           m_level3Queue.insert (
               std::make_tuple (weight, Simulator::Now ().GetNanoSeconds (), dataPacketEntry));
           if (m_level3Queue.size () > 2)
@@ -112,8 +112,9 @@ AodvWeepScheduler::ClearLevel2Queue ()
 {
   while (!m_level2Queue.empty ())
     {
-      auto packet = m_level2Queue.begin ()->second;
-      auto time = m_level2Queue.begin ()->first;
+      auto packet = std::get<2> (*m_level2Queue.begin ());
+      ;
+      auto time = std::get<1> (*m_level2Queue.begin ());
       m_perPacketWaitingTimeTrace (Simulator::Now ().GetNanoSeconds () - time);
       m_level2Queue.erase (m_level2Queue.begin ());
       packet->Send ();
@@ -125,6 +126,7 @@ AodvWeepScheduler::ForwardPackets (uint32_t packetsToBeForwarded)
 {
   if (packetsToBeForwarded <= 0)
     return;
+  auto weight = std::get<0> (*m_level3Queue.begin ());
   auto packet = std::get<2> (*m_level3Queue.begin ());
   auto entryTime = std::get<1> (*m_level3Queue.begin ());
   auto session = packet->GetSessionId ();
@@ -134,7 +136,7 @@ AodvWeepScheduler::ForwardPackets (uint32_t packetsToBeForwarded)
       if (m_sessionsInL2Queue.find (session) == m_sessionsInL2Queue.end ())
         {
           m_sessionsInL2Queue.insert (session);
-          m_level2Queue.push_back (std::make_pair (entryTime, packet));
+          m_level2Queue.insert (std::make_tuple (weight, entryTime, packet));
           m_level3Queue.erase (m_level3Queue.begin ());
         }
       forwardedPackets++;
@@ -271,13 +273,45 @@ AodvWeepScheduler::CalculateFragilityIndex (Ptr<DataPacketQueueEntry> entry)
 }
 
 double
+AodvWeepScheduler::CalculateHopFactor (Ptr<DataPacketQueueEntry> entry)
+{
+  std::string session = entry->GetSessionId ();
+  return 1.0 / m_hops[session];
+}
+
+double
+AodvWeepScheduler::CalculateUrgencyFactor (Ptr<DataPacketQueueEntry> entry)
+{
+  auto packet = entry->GetPacket ();
+  TimestampTag timestampTag;
+  if (packet->PeekPacketTag (timestampTag))
+    {
+      uint64_t t0 = timestampTag.GetTimestamp ().GetNanoSeconds ();
+      uint64_t t1 = Simulator::Now ().GetNanoSeconds ();
+      return (t1 - t0) / (float) t0;
+    }
+  else
+    {
+      return 1.0;
+    }
+}
+
+double
 AodvWeepScheduler::CalculateWeight (Ptr<DataPacketQueueEntry> entry)
 {
-  auto weight = 1.0 * CalculateEstimatedLifetimeIndex (entry) *
-                CalculatePathPerformanceIndex (entry) * CalculateFragilityIndex (entry);
+  auto ELI = CalculateEstimatedLifetimeIndex (entry);
+  auto PPI = CalculatePathPerformanceIndex (entry);
+  auto FI = CalculateFragilityIndex (entry);
+  auto H = CalculateHopFactor (entry);
+  auto U = CalculateUrgencyFactor (entry);
+
+  auto weight = ELI * PPI * FI * H * U;
   if (weight > 0)
+  {
     NS_LOG_DEBUG ("Weight for packet from " << entry->GetSource () << " to "
                                             << entry->GetDestination () << " is " << weight);
+    NS_LOG_DEBUG("Factors: eli = " << ELI << "; ppi = " << PPI << "; fi = " << FI << "; h = " << H << "; u = " << U);
+  }
   return weight;
 }
 

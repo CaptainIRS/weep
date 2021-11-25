@@ -56,15 +56,20 @@ private:
   double CalculateFragilityIndex (Ptr<DataPacketQueueEntry> entry);
   /// Calculate Path performance index (ppi)
   double CalculatePathPerformanceIndex (Ptr<DataPacketQueueEntry> entry);
+  /// Calculate Hop Factor (H)
+  double CalculateHopFactor (Ptr<DataPacketQueueEntry> entry);
+  /// Calculate urgency factor
+  double CalculateUrgencyFactor (Ptr<DataPacketQueueEntry> entry);
   /// Forward packets from level3 to level2
   void ForwardPackets (uint32_t numPackets);
   /// Clear level2 queue
   void ClearLevel2Queue ();
   /// Update node data from packet
   void UpdateNodeData (Ptr<PacketQueueEntry> entry);
+
   /// Packet queues
   std::vector<std::pair<uint64_t, Ptr<PacketQueueEntry>>> m_level1Queue;
-  std::vector<std::pair<uint64_t, Ptr<DataPacketQueueEntry>>> m_level2Queue;
+  std::set<std::tuple<double, uint64_t, Ptr<DataPacketQueueEntry>>> m_level2Queue;
   std::set<std::tuple<double, uint64_t, Ptr<DataPacketQueueEntry>>> m_level3Queue;
   std::queue<Ptr<DataPacketQueueEntry>, std::vector<Ptr<DataPacketQueueEntry>>> m_sendQueue;
   /// Random variable generator to generate jitter
