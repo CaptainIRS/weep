@@ -5,6 +5,7 @@
 
 #include "ns3/random-variable-stream.h"
 #include "packet-scheduler-base.h"
+#include "aodv-queue.h"
 #include <cstdint>
 
 namespace ns3 {

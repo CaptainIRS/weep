@@ -9,7 +9,7 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("AodvRequestQueue");
+NS_LOG_COMPONENT_DEFINE ("AodvWeepSendBuffer");
 
 namespace weep {
 uint32_t

@@ -1,7 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 #include "aodv-sjf-scheduler.h"
-#include "aodv-weep-queue.h"
+#include "aodv-queue.h"
 #include "packet-tags.h"
 #include "ns3/log.h"
 #include "ns3/nstime.h"

@@ -4,7 +4,7 @@
   if (m_ipv4) { std::clog << "[node " << m_ipv4->GetObject<Node> ()->GetId () << "] "; }
 
 #include "aodv-weep-routing-protocol.h"
-#include "aodv-weep-queue.h"
+#include "aodv-queue.h"
 #include "aodv-fcfs-scheduler.h"
 #include "packet-tags.h"
 #include "ns3/energy-source.h"

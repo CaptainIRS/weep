@@ -18,7 +18,7 @@ namespace weep {
 
 enum CallbackType { UNICAST_FORWARD, ERROR, LOCAL_DELIVERY, NONE };
 
-class BaseWeepQueueEntry : public PacketQueueEntry
+class BaseAodvQueueEntry : public PacketQueueEntry
 {
 public:
   /// IPv4 routing unicast forward callback typedef
@@ -29,7 +29,7 @@ public:
   typedef Ipv4RoutingProtocol::LocalDeliverCallback LocalDeliverCallback;
 
   static TypeId GetTypeId (void);
-  BaseWeepQueueEntry () = default;
+  BaseAodvQueueEntry () = default;
   /**
    * Constructor for unicast forward
    *
@@ -38,7 +38,7 @@ public:
    * \param packet the packet to add to the queue
    * \param header the Ipv4Header
    */
-  BaseWeepQueueEntry (UnicastForwardCallback ucb, Ptr<Ipv4Route> route, Ptr<const Packet> packet,
+  BaseAodvQueueEntry (UnicastForwardCallback ucb, Ptr<Ipv4Route> route, Ptr<const Packet> packet,
                       Ipv4Header const &header)
       : PacketQueueEntry (packet),
         m_route (route),
@@ -46,6 +46,7 @@ public:
         m_ucb (ucb),
         m_callbackType (UNICAST_FORWARD)
   {
+    m_ucb (m_route, m_packet, m_header);
   }
 
   /**
@@ -56,7 +57,7 @@ public:
    * \param header the Ipv4Header
    * \param socketErrorNo the socket error number
    */
-  BaseWeepQueueEntry (ErrorCallback ecb, Ptr<const Packet> packet, Ipv4Header const &header,
+  BaseAodvQueueEntry (ErrorCallback ecb, Ptr<const Packet> packet, Ipv4Header const &header,
                       Socket::SocketErrno socketErrorNo)
       : PacketQueueEntry (packet),
         m_header (header),
@@ -64,6 +65,7 @@ public:
         m_callbackType (ERROR),
         m_socketErrno (socketErrorNo)
   {
+    m_ecb (m_packet, m_header, m_socketErrno);
   }
 
   /**
@@ -74,7 +76,7 @@ public:
    * \param header the Ipv4Header
    * \param interface the interface index
    */
-  BaseWeepQueueEntry (LocalDeliverCallback lcb, Ptr<const Packet> packet, Ipv4Header const &header,
+  BaseAodvQueueEntry (LocalDeliverCallback lcb, Ptr<const Packet> packet, Ipv4Header const &header,
                       uint32_t interface)
       : PacketQueueEntry (packet),
         m_header (header),
@@ -82,10 +84,10 @@ public:
         m_callbackType (LOCAL_DELIVERY),
         m_ifIndex (interface)
   {
-    lcb (packet, header, interface);
+    m_lcb (m_packet, m_header, m_ifIndex);
   }
 
-  BaseWeepQueueEntry (Ptr<const Packet> pa, Ipv4Address d, Ptr<Socket> socket)
+  BaseAodvQueueEntry (Ptr<const Packet> pa, Ipv4Address d, Ptr<Socket> socket)
       : PacketQueueEntry (pa), m_callbackType (NONE), m_destination (d), m_socket (socket)
   {
   }
@@ -153,7 +155,16 @@ public:
   bool
   IsLocalDelivery (void)
   {
-    return m_callbackType == LOCAL_DELIVERY;
+    switch (m_callbackType)
+      {
+      case LOCAL_DELIVERY:
+        return true;
+      case UNICAST_FORWARD:
+      case ERROR:
+      case NONE:
+        return false;
+      }
+    return false;
   };
 
   /**
@@ -195,18 +206,18 @@ protected:
   Ptr<Socket> m_socket;
 };
 
-class DataPacketQueueEntry : public BaseWeepQueueEntry
+class DataPacketQueueEntry : public BaseAodvQueueEntry
 {
 public:
   static TypeId GetTypeId (void);
-  using BaseWeepQueueEntry::BaseWeepQueueEntry;
+  using BaseAodvQueueEntry::BaseAodvQueueEntry;
 };
 
-class ControlPacketQueueEntry : public BaseWeepQueueEntry
+class ControlPacketQueueEntry : public BaseAodvQueueEntry
 {
 public:
   static TypeId GetTypeId (void);
-  using BaseWeepQueueEntry::BaseWeepQueueEntry;
+  using BaseAodvQueueEntry::BaseAodvQueueEntry;
 };
 
 } // namespace weep

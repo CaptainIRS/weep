@@ -8,7 +8,7 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("AodvRoutingTable");
+NS_LOG_COMPONENT_DEFINE ("WeepAodvRoutingTable");
 
 namespace weep {
 

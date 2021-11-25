@@ -10,7 +10,7 @@
 #include "packet-scheduler-base.h"
 #include "packet-tags.h"
 #include "ns3/simulator.h"
-#include "aodv-weep-queue.h"
+#include "aodv-queue.h"
 #include <cstdint>
 #include <iostream>
 #include <sstream>
@@ -27,11 +27,10 @@ namespace weep {
 TypeId
 AodvWeepScheduler::GetTypeId ()
 {
-  static TypeId tid =
-      TypeId ("ns3::weep::AodvWeepScheduler")
-          .SetParent<PacketScheduler> ()
-          .SetGroupName ("AodvWeep")
-          .AddConstructor<AodvWeepScheduler> ();
+  static TypeId tid = TypeId ("ns3::weep::AodvWeepScheduler")
+                          .SetParent<PacketScheduler> ()
+                          .SetGroupName ("AodvWeep")
+                          .AddConstructor<AodvWeepScheduler> ();
   ;
   return tid;
 }
@@ -47,17 +46,25 @@ AodvWeepScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
           return true;
         }
       auto session = dataPacketEntry->GetSessionId ();
-      auto weight = CalculateWeight (dataPacketEntry);
       if (m_sessionsInL2Queue.find (session) == m_sessionsInL2Queue.end ())
         {
           m_sessionsInL2Queue.insert (session);
-          m_level2Queue.insert (std::make_tuple (weight, Simulator::Now().GetNanoSeconds(), dataPacketEntry));
-          NS_LOG_DEBUG ("Size of level 2 queue: " << m_level2Queue.size ());
+          m_level2Queue.push_back (
+              std::make_pair (Simulator::Now ().GetNanoSeconds (), dataPacketEntry));
+          if (m_level2Queue.size () > 2)
+            {
+              NS_LOG_DEBUG ("Size of level 2 queue: " << m_level2Queue.size ());
+            }
         }
       else
         {
-          m_level3Queue.insert (std::make_tuple (weight, Simulator::Now().GetNanoSeconds(), dataPacketEntry));
-          NS_LOG_DEBUG ("Size of level 3 queue: " << m_level3Queue.size ());
+          auto weight = CalculateWeight (dataPacketEntry);
+          m_level3Queue.insert (
+              std::make_tuple (weight, Simulator::Now ().GetNanoSeconds (), dataPacketEntry));
+          if (m_level3Queue.size () > 2)
+            {
+              NS_LOG_DEBUG ("Size of level 3 queue: " << m_level3Queue.size ());
+            }
         }
     }
   else if (auto controlPacketEntry = DynamicCast<ControlPacketQueueEntry> (entry))
@@ -67,52 +74,70 @@ AodvWeepScheduler::Enqueue (Ptr<PacketQueueEntry> entry)
           UpdateNodeData (entry);
           return true;
         }
-      m_level1Queue.push_back (std::make_pair(Simulator::Now().GetNanoSeconds(), entry));
-      // NS_LOG_DEBUG ("Size of level 1 queue: " << m_level1Queue.size ());
+      m_level1Queue.push_back (std::make_pair (Simulator::Now ().GetNanoSeconds (), entry));
+      if (m_level1Queue.size () > 2)
+        {
+          NS_LOG_DEBUG ("Size of level 1 queue: " << m_level1Queue.size ());
+        }
     }
-
-  Simulator::Schedule (MicroSeconds (0), &AodvWeepScheduler::SendPacket, this);
+  auto jitter = m_uniformRandomVariable->GetValue ();
+  Simulator::Schedule (MicroSeconds (jitter), &AodvWeepScheduler::SendPacket, this);
   return true;
 }
 
 void
 AodvWeepScheduler::SendPacket ()
 {
-  while (!m_level1Queue.empty ())
+  if (!m_level1Queue.empty ())
     {
       auto packet = m_level1Queue.back ().second;
       auto time = m_level1Queue.back ().first;
-      m_perPacketWaitingTimeTrace(Simulator::Now().GetNanoSeconds() - time);
+      m_perPacketWaitingTimeTrace (Simulator::Now ().GetNanoSeconds () - time);
       m_level1Queue.pop_back ();
       packet->Send ();
+      auto jitter = m_uniformRandomVariable->GetValue ();
+      Simulator::Schedule (MicroSeconds (jitter), &AodvWeepScheduler::SendPacket, this);
+      return;
     }
   auto lenq2 = m_level2Queue.size ();
   auto lenq3 = m_level3Queue.size ();
+  auto packetsToBeForwarded = lenq2 != 0 ? lenq3 / lenq2 : lenq3;
+  m_sessionsInL2Queue.clear ();
+  ClearLevel2Queue ();
+  ForwardPackets (packetsToBeForwarded);
+}
+
+void
+AodvWeepScheduler::ClearLevel2Queue ()
+{
   while (!m_level2Queue.empty ())
     {
-      auto packet = std::get<2>(*m_level2Queue.begin ());
-      auto time = std::get<1>(*m_level2Queue.begin ());
-      m_perPacketWaitingTimeTrace(Simulator::Now().GetNanoSeconds() - time);
+      auto packet = m_level2Queue.begin ()->second;
+      auto time = m_level2Queue.begin ()->first;
+      m_perPacketWaitingTimeTrace (Simulator::Now ().GetNanoSeconds () - time);
       m_level2Queue.erase (m_level2Queue.begin ());
       packet->Send ();
     }
-  auto packetsToBeForwarded = lenq2 != 0 ? lenq3 / lenq2 : lenq3;
-  m_sessionsInL2Queue.clear ();
-  unsigned long forwarded = 0;
-  for (long unsigned int i = 0; i < m_level3Queue.size (); i++)
+}
+
+void
+AodvWeepScheduler::ForwardPackets (uint32_t packetsToBeForwarded)
+{
+  if (packetsToBeForwarded <= 0)
+    return;
+  auto packet = std::get<2> (*m_level3Queue.begin ());
+  auto entryTime = std::get<1> (*m_level3Queue.begin ());
+  auto session = packet->GetSessionId ();
+  uint32_t forwardedPackets = 0;
+  while (forwardedPackets < packetsToBeForwarded)
     {
-      if (forwarded >= packetsToBeForwarded)
-        break;
-      auto packet = std::get<2>(*m_level3Queue.begin ());
-      auto entryTime = std::get<1>(*m_level3Queue.begin ());
-      auto session = packet->GetSessionId ();
       if (m_sessionsInL2Queue.find (session) == m_sessionsInL2Queue.end ())
         {
           m_sessionsInL2Queue.insert (session);
-          m_level2Queue.insert (std::make_tuple (CalculateWeight (packet), entryTime, packet));
+          m_level2Queue.push_back (std::make_pair (entryTime, packet));
           m_level3Queue.erase (m_level3Queue.begin ());
-          forwarded++;
         }
+      forwardedPackets++;
     }
 }
 
@@ -187,9 +212,6 @@ AodvWeepScheduler::UpdateNodeData (Ptr<PacketQueueEntry> entry)
         {
           if (m_hops[session] < hopsCountTag.GetHopCount ())
             {
-              NS_LOG_DEBUG ("Fragility increases for "
-                            << session << " from " << m_fragilityIndices[session] << " to "
-                            << hopsCountTag.GetHopCount () - m_hops[session]);
               m_fragilityIndices[session] = hopsCountTag.GetHopCount () - m_hops[session];
               m_hops[session] = hopsCountTag.GetHopCount ();
             }
@@ -199,6 +221,16 @@ AodvWeepScheduler::UpdateNodeData (Ptr<PacketQueueEntry> entry)
               m_hops[session] = hopsCountTag.GetHopCount ();
             }
         }
+    }
+
+  if (m_fragilityIndices[session] != 0)
+    {
+      NS_LOG_DEBUG ("Source: " << source << "; Destination: " << destination
+                               << "; Session: " << session << "; Hop count: " << m_hops[session]
+                               << "; Fragility index: " << m_fragilityIndices[session]
+                               << "; Max energy: " << m_maxEnergies[source]
+                               << "; Current energy: " << m_currentEnergies[source]
+                               << "; Depletion rate: " << m_depletionRates[source]);
     }
 }
 
@@ -213,10 +245,6 @@ AodvWeepScheduler::CalculateEstimatedLifetimeIndex (Ptr<DataPacketQueueEntry> en
   auto currentEnergy = m_currentEnergies[destination];
   auto depletionRate = m_depletionRates[destination];
   auto survivalTimeRemaining = (m_maxEnergies[destination] - currentEnergy) / depletionRate;
-  NS_LOG_DEBUG ("Node: " << m_nodeAddress << ", Destination: " << destination
-                         << ", Depletion rate: " << depletionRate << ", Current: " << currentEnergy
-                         << ", Max: " << m_maxEnergies[destination]
-                         << ", Survival: " << survivalTimeRemaining);
   return std::min (survivalTimeRemaining, 10.0) / 10.0;
 }
 
@@ -227,7 +255,6 @@ AodvWeepScheduler::CalculatePathPerformanceIndex (Ptr<DataPacketQueueEntry> entr
 
   if (m_hops.find (session) == m_hops.end ())
     {
-      NS_LOG_DEBUG ("No ppi for session: " << session);
       return 1;
     }
   else
@@ -248,8 +275,9 @@ AodvWeepScheduler::CalculateWeight (Ptr<DataPacketQueueEntry> entry)
 {
   auto weight = 1.0 * CalculateEstimatedLifetimeIndex (entry) *
                 CalculatePathPerformanceIndex (entry) * CalculateFragilityIndex (entry);
-  NS_LOG_DEBUG ("Weight for packet from " << entry->GetSource () << " to "
-                                          << entry->GetDestination () << " is " << weight);
+  if (weight > 0)
+    NS_LOG_DEBUG ("Weight for packet from " << entry->GetSource () << " to "
+                                            << entry->GetDestination () << " is " << weight);
   return weight;
 }
 

@@ -9,13 +9,20 @@
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/flow-monitor.h"
 #include "ns3/ipv4-flow-classifier.h"
+#include "ns3/ipv4-routing-protocol.h"
 #include "ns3/log-macros-enabled.h"
 #include "ns3/network-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/config-store-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/node-list.h"
+#include "ns3/nstime.h"
+#include "ns3/packet-scheduler-base.h"
+#include "ns3/aodv-weep-scheduler.h"
+#include "ns3/aodv-weep-routing-protocol.h"
 #include "ns3/packet.h"
+#include "ns3/ptr.h"
 #include "ns3/string.h"
 #include "ns3/wifi-radio-energy-model-helper.h"
 #include "ns3/yans-wifi-helper.h"
@@ -38,39 +45,27 @@ WeepWifiSimulation::WeepWifiSimulation ()
 }
 
 long double
-WeepWifiSimulation::GetPacketsReceived ()
+WeepWifiSimulation::GetThroughput ()
 {
-  return m_packetsReceived;
+  return (double) m_bytesReceived / m_totalTime;
 }
 
 long double
-WeepWifiSimulation::GetPacketsSent ()
+WeepWifiSimulation::GetPDR ()
 {
-  return m_packetsSent;
-}
-
-long double
-WeepWifiSimulation::GetBytesReceived ()
-{
-  return m_bytesReceived;
-}
-
-long double
-WeepWifiSimulation::GetBytesSent ()
-{
-  return m_bytesSent;
+  return (double) m_packetsReceived / m_packetsSent;
 }
 
 double
 WeepWifiSimulation::GetPerPacketPerRouterWaitingTime ()
 {
-  return (double) m_perPacketPerRouterWaitingTime / 10e9;
+  return (double) m_perPacketPerRouterWaitingTime / 10e9 / m_packetsQueued;
 }
 
 void
-WeepWifiSimulation::UpdatePerPacketPerRouterWaitingTime (double time)
+WeepWifiSimulation::UpdatePerPacketPerRouterWaitingTime (uint64_t time)
 {
-  std::cout << "Called" << std::endl;
+  m_packetsQueued++;
   m_perPacketPerRouterWaitingTime += time;
 }
 
@@ -88,6 +83,7 @@ WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nS
   m_nodeSpeed = nodeSpeed;
   m_dataStart = dataStart;
   m_perPacketPerRouterWaitingTime = 0;
+  m_packetsQueued = 0;
 
   CreateNodes ();
   CreateDevices ();
@@ -98,6 +94,8 @@ WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nS
 
   FlowMonitorHelper flowHelper;
   auto monitor = flowHelper.InstallAll ();
+
+  SetupTrace();
 
   Simulator::Stop (Seconds (m_totalTime + 10));
   Simulator::Run ();
@@ -133,9 +131,10 @@ WeepWifiSimulation::SetupMobility ()
   MobilityHelper mobility;
   ObjectFactory pos;
   std::ostringstream positionVariableStream;
-  double width = sqrt (nodes.GetN ()) * 20;
-  positionVariableStream << "ns3::UniformRandomVariable[Min=" << -width / 2.0
-                         << "|Max=" << width / 2.0 << "]";
+  // double width = sqrt (nodes.GetN ()) * 20;
+  // positionVariableStream << "ns3::UniformRandomVariable[Min=" << -width / 2.0
+  //                        << "|Max=" << width / 2.0 << "]";
+  positionVariableStream << "ns3::UniformRandomVariable[Min=-250|Max=250]";
   pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
   pos.Set ("X", StringValue (positionVariableStream.str ()));
   pos.Set ("Y", StringValue (positionVariableStream.str ()));
@@ -180,7 +179,6 @@ WeepWifiSimulation::InstallInternetStack ()
   Ipv4AddressHelper address;
   address.SetBase ("10.1.1.0", "255.255.255.0");
   interfaces = address.Assign (devices);
-  stack.EnableAsciiIpv4All ("trace.tr");
 }
 
 void
@@ -214,4 +212,14 @@ WeepWifiSimulation::InstallEnergyModels ()
   EnergySourceContainer sources = basicSourceHelper.Install (nodes);
   WifiRadioEnergyModelHelper radioEnergyHelper;
   DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (devices, sources);
+}
+
+void
+WeepWifiSimulation::SetupTrace ()
+{
+  for (uint32_t i = 0; i < NodeList::GetNNodes (); i++)
+    {
+      auto scheduler = DynamicCast<weep::AodvWeepScheduler>(NodeList::GetNode (i)->GetObject<weep::AodvWeepRoutingProtocol>()->GetScheduler());
+      scheduler->TraceConnectWithoutContext("PerPacketWaitingTime", MakeCallback (&WeepWifiSimulation::UpdatePerPacketPerRouterWaitingTime, this));
+    }
 }

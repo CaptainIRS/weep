@@ -3,7 +3,7 @@
 #include <vector>
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/inet-socket-address.h"
-#include "aodv-weep-queue.h"
+#include "aodv-queue.h"
 #include "packet-scheduler-base.h"
 #include "aodv-weep-routing-protocol.h"
 
@@ -20,7 +20,7 @@ DataPacketQueueEntry::GetTypeId ()
 }
 
 void
-BaseWeepQueueEntry::Send ()
+BaseAodvQueueEntry::Send ()
 {
   if (m_callbackType == UNICAST_FORWARD)
     {
@@ -37,7 +37,7 @@ BaseWeepQueueEntry::Send ()
 }
 
 void
-BaseWeepQueueEntry::ParseHeaders ()
+BaseAodvQueueEntry::ParseHeaders ()
 {
   switch (m_callbackType)
     {

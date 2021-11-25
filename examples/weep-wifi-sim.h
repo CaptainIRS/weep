@@ -22,10 +22,8 @@ public:
 
   void CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nSinks, double totalTime,
                 double range, uint32_t nodeSpeed, double dataStart);
-  long double GetBytesReceived ();
-  long double GetPacketsReceived ();
-  long double GetBytesSent ();
-  long double GetPacketsSent ();
+  long double GetThroughput ();
+  long double GetPDR ();
   double GetPerPacketPerRouterWaitingTime();
 
 private:
@@ -38,7 +36,7 @@ private:
   long double m_bytesReceived;
   long double m_packetsReceived;
   long double m_bytesSent;
-  long double m_packetsSent;
+  long double m_packetsSent, m_packetsQueued;
   uint64_t m_perPacketPerRouterWaitingTime;
   std::string m_scheduler;
 
@@ -53,6 +51,7 @@ private:
   void InstallApplications ();
   void SetupMobility ();
   void InstallEnergyModels ();
-  void UpdatePerPacketPerRouterWaitingTime(double waitingTime);
+  void UpdatePerPacketPerRouterWaitingTime(uint64_t waitingTime);
+  void SetupTrace();
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
 };

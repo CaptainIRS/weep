@@ -4,13 +4,15 @@
 #define AODV_WEEP_SCHEDULER_H
 
 #include <cstdint>
+#include <queue>
 #include <vector>
+#include "ns3/double.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/ipv4-routing-protocol.h"
 #include "ns3/packet.h"
 #include "ns3/random-variable-stream.h"
 #include "packet-scheduler-base.h"
-#include "aodv-weep-queue.h"
+#include "aodv-queue.h"
 
 namespace ns3 {
 
@@ -28,6 +30,8 @@ public:
   AodvWeepScheduler ()
   {
     m_uniformRandomVariable = CreateObject<UniformRandomVariable> ();
+    m_uniformRandomVariable->SetAttribute("Min", DoubleValue (0.0));
+    m_uniformRandomVariable->SetAttribute("Max", DoubleValue (100.0));
   }
   AodvWeepScheduler (uint32_t maxLen, Time maxDelay)
   {
@@ -53,12 +57,16 @@ private:
   /// Calculate Path performance index (ppi)
   double CalculatePathPerformanceIndex (Ptr<DataPacketQueueEntry> entry);
   /// Forward packets from level3 to level2
-  void ForwardPackets ();
+  void ForwardPackets (uint32_t numPackets);
+  /// Clear level2 queue
+  void ClearLevel2Queue ();
   /// Update node data from packet
   void UpdateNodeData (Ptr<PacketQueueEntry> entry);
   /// Packet queues
   std::vector<std::pair<uint64_t, Ptr<PacketQueueEntry>>> m_level1Queue;
-  std::set<std::tuple<double, uint64_t, Ptr<DataPacketQueueEntry>>> m_level2Queue, m_level3Queue;
+  std::vector<std::pair<uint64_t, Ptr<DataPacketQueueEntry>>> m_level2Queue;
+  std::set<std::tuple<double, uint64_t, Ptr<DataPacketQueueEntry>>> m_level3Queue;
+  std::queue<Ptr<DataPacketQueueEntry>, std::vector<Ptr<DataPacketQueueEntry>>> m_sendQueue;
   /// Random variable generator to generate jitter
   Ptr<UniformRandomVariable> m_uniformRandomVariable;
   /// Depletion rates
