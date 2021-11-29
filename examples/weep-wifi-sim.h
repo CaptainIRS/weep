@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include "ns3/core-module.h"
+#include "ns3/energy-source-container.h"
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/gnuplot.h"
 #include "ns3/network-module.h"
@@ -24,7 +25,11 @@ public:
                 double range, uint32_t nodeSpeed, double dataStart);
   long double GetThroughput ();
   long double GetPDR ();
-  double GetPerPacketPerRouterWaitingTime();
+  long double GetAverageDelay ();
+  double GetPerPacketPerRouterWaitingTime ();
+  long double GetAverageEnergyConsumption ();
+  void SinkTrace (Ptr<const Packet> packet, const Address &from, const Address &localAddress,
+                  const SeqTsSizeHeader &header);
 
 private:
   uint32_t m_nWifis;
@@ -37,12 +42,15 @@ private:
   long double m_packetsReceived;
   long double m_bytesSent;
   long double m_packetsSent, m_packetsQueued;
+  long double m_totalDelay;
+  long double m_totalRemainingEnergy;
   uint64_t m_perPacketPerRouterWaitingTime;
   std::string m_scheduler;
 
   NodeContainer nodes;
   NetDeviceContainer devices;
   Ipv4InterfaceContainer interfaces;
+  EnergySourceContainer sources;
 
 private:
   void CreateNodes ();
@@ -51,7 +59,7 @@ private:
   void InstallApplications ();
   void SetupMobility ();
   void InstallEnergyModels ();
-  void UpdatePerPacketPerRouterWaitingTime(uint64_t waitingTime);
-  void SetupTrace();
+  void UpdatePerPacketPerRouterWaitingTime (uint64_t waitingTime);
+  void SetupTrace ();
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
 };

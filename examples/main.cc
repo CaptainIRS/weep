@@ -40,7 +40,8 @@ main (int argc, char **argv)
   test.CaseRun (scheduler, nodes, sinks, totalTime, range, speed, dataStart);
   std::fstream out (fileName, std::fstream::out | std::fstream::app);
   out << nodes << ", " << test.GetThroughput () << ", " << test.GetPDR () << ", "
-            << test.GetPerPacketPerRouterWaitingTime () << "\n";
+      << test.GetPerPacketPerRouterWaitingTime () << ", " << test.GetAverageDelay () << ", "
+      << test.GetAverageEnergyConsumption () << "\n";
   out.close ();
 
   return 0;

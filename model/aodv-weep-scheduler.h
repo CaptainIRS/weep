@@ -49,6 +49,8 @@ private:
   /// 2. Estimated lifetime index (eli).
   /// 3. Fragility index (fi).
   /// 4. Path performance index (ppi).
+  /// 5. Urgency Factor (H)
+  /// 5. Hop Factor (U)
   double CalculateWeight (Ptr<DataPacketQueueEntry> entry);
   /// Calculate Estimated lifetime index (eli)
   double CalculateEstimatedLifetimeIndex (Ptr<DataPacketQueueEntry> entry);
@@ -58,7 +60,7 @@ private:
   double CalculatePathPerformanceIndex (Ptr<DataPacketQueueEntry> entry);
   /// Calculate Hop Factor (H)
   double CalculateHopFactor (Ptr<DataPacketQueueEntry> entry);
-  /// Calculate urgency factor
+  /// Calculate Urgency Factor (U)
   double CalculateUrgencyFactor (Ptr<DataPacketQueueEntry> entry);
   /// Forward packets from level3 to level2
   void ForwardPackets (uint32_t numPackets);

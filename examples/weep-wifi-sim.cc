@@ -69,6 +69,18 @@ WeepWifiSimulation::UpdatePerPacketPerRouterWaitingTime (uint64_t time)
   m_perPacketPerRouterWaitingTime += time;
 }
 
+long double
+WeepWifiSimulation::GetAverageDelay ()
+{
+  return m_totalDelay / m_packetsReceived;
+}
+
+long double
+WeepWifiSimulation::GetAverageEnergyConsumption ()
+{
+  return m_totalRemainingEnergy / nodes.GetN ();
+}
+
 void
 WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nSinks,
                              double totalTime, double range, uint32_t nodeSpeed, double dataStart)
@@ -84,6 +96,7 @@ WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nS
   m_dataStart = dataStart;
   m_perPacketPerRouterWaitingTime = 0;
   m_packetsQueued = 0;
+  m_totalDelay = 0;
 
   CreateNodes ();
   CreateDevices ();
@@ -95,7 +108,7 @@ WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nS
   FlowMonitorHelper flowHelper;
   auto monitor = flowHelper.InstallAll ();
 
-  SetupTrace();
+  SetupTrace ();
 
   Simulator::Stop (Seconds (m_totalTime + 10));
   Simulator::Run ();
@@ -111,8 +124,14 @@ WeepWifiSimulation::CaseRun (std::string scheduler, uint32_t nWifis, uint32_t nS
       m_packetsReceived += stat.second.rxPackets;
       m_bytesSent += stat.second.txBytes;
       m_bytesReceived += stat.second.rxBytes;
+      m_totalDelay += stat.second.delaySum.GetMilliSeconds ();
     }
   monitor->SerializeToXmlFile ("flow.xml", true, true);
+
+  for (uint32_t i = 0; i < sources.GetN (); i++)
+    {
+      m_totalRemainingEnergy += 1000 - sources.Get (i)->GetRemainingEnergy ();
+    }
 
   Simulator::Destroy ();
 }
@@ -131,10 +150,8 @@ WeepWifiSimulation::SetupMobility ()
   MobilityHelper mobility;
   ObjectFactory pos;
   std::ostringstream positionVariableStream;
-  // double width = sqrt (nodes.GetN ()) * 20;
-  // positionVariableStream << "ns3::UniformRandomVariable[Min=" << -width / 2.0
-  //                        << "|Max=" << width / 2.0 << "]";
   positionVariableStream << "ns3::UniformRandomVariable[Min=-250|Max=250]";
+  // positionVariableStream << "ns3::UniformRandomVariable[Min=-50|Max=50]";
   pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
   pos.Set ("X", StringValue (positionVariableStream.str ()));
   pos.Set ("Y", StringValue (positionVariableStream.str ()));
@@ -208,8 +225,9 @@ void
 WeepWifiSimulation::InstallEnergyModels ()
 {
   BasicEnergySourceHelper basicSourceHelper;
-  basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (10));
-  EnergySourceContainer sources = basicSourceHelper.Install (nodes);
+  basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (10000));
+  sources = basicSourceHelper.Install (nodes);
+
   WifiRadioEnergyModelHelper radioEnergyHelper;
   DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install (devices, sources);
 }
@@ -219,7 +237,10 @@ WeepWifiSimulation::SetupTrace ()
 {
   for (uint32_t i = 0; i < NodeList::GetNNodes (); i++)
     {
-      auto scheduler = DynamicCast<weep::AodvWeepScheduler>(NodeList::GetNode (i)->GetObject<weep::AodvWeepRoutingProtocol>()->GetScheduler());
-      scheduler->TraceConnectWithoutContext("PerPacketWaitingTime", MakeCallback (&WeepWifiSimulation::UpdatePerPacketPerRouterWaitingTime, this));
+      auto scheduler = DynamicCast<weep::AodvWeepScheduler> (
+          NodeList::GetNode (i)->GetObject<weep::AodvWeepRoutingProtocol> ()->GetScheduler ());
+      scheduler->TraceConnectWithoutContext (
+          "PerPacketWaitingTime",
+          MakeCallback (&WeepWifiSimulation::UpdatePerPacketPerRouterWaitingTime, this));
     }
 }
